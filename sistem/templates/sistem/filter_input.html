@@ -1,0 +1,78 @@
+{% extends 'sistem/base.html' %}
+{% load static %}
+{% block title %}Filter Recommendations{% endblock %}
+
+{% block navigation %}
+<header class="header">
+    <h1 class="header-title">REKOMENDASI BUKU</h1>
+    <nav class="nav-links">
+        <a href="{% url 'sistem:home' %}" class="nav-link">HOME</a>
+        {# Saya perbaiki URL ini agar mengarah ke dashboard publik untuk user yang belum login #}
+        <a href="{% if user.is_authenticated %}{% url 'sistem:dashboard_user' %}{% else %}{% url 'sistem:dashboard' %}{% endif %}" class="nav-link">DASHBOARD</a>
+        <a href="{% url 'sistem:input' %}" class="nav-link">RECOMMENDATION</a>
+
+        {# --- BAGIAN OTENTIKASI SEKARANG BERADA DI PALING AKHIR/KANAN --- #}
+        {% if user.is_authenticated %}
+            <div class="profile-section">
+                <a href="#" class="notification-icon" aria-label="Favorites">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </a>
+                <a href="{% url 'sistem:dashboard_user' %}" class="profile-avatar-link" aria-label="Lihat Dashboard">
+                    <div class="profile-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    </div>
+                </a>
+            </div>
+        {% else %}
+            {# Tombol Login/Register sekarang akan menjadi elemen terakhir di kanan #}
+            <a href="{% url 'sistem:register' %}" class="header-button">REGISTER</a>
+            <a href="{% url 'sistem:login' %}" class="header-button">LOGIN</a>
+        {% endif %}
+    </nav>
+</header>
+<hr class="header-divider">
+{% endblock navigation %}
+
+{% block content %}
+<main class="recommendation-page-layout">
+    <div class="recommendation-form-container">
+        <div class="form-header">
+            <h2 class="form-title">Find Books by Preference</h2>
+            <p class="form-subtitle">Use our smart filters to find books that match your taste!</p>
+        </div>
+
+        <form method="POST" action="{% url 'sistem:filter_results' %}">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label">Select Your Favorite Genres:</label>
+                <div class="genre-checkbox-group">
+                    {% for genre in available_genres %}
+                    {# [DIUBAH] Teks genre dibungkus span agar bisa di-style #}
+                    <label class="genre-checkbox-label">
+                        <input type="checkbox" name="genres" value="{{ genre|lower }}" class="genre-checkbox">
+                        <span class="genre-tag">{{ genre|title }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {# [BARU] Wrapper untuk mensejajarkan Rating dan Halaman #}
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="rating_min" class="form-label">Minimum Rating (1-5):</label>
+                    <input type="number" id="rating_min" name="rating_min" class="form-input" min="1" max="5" step="0.1" placeholder="e.g., 4.0">
+                </div>
+
+                <div class="form-group">
+                    <label for="halaman_maks" class="form-label">Maximum Pages:</label>
+                    <input type="number" id="halaman_maks" name="halaman_maks" class="form-input" min="1" placeholder="e.g., 300">
+                </div>
+            </div>
+
+            {# Tombol submit dipindahkan ke luar .filter-form-grid untuk styling yang lebih baik #}
+            <button type="submit" class="form-button">FIND BOOKS</button>
+        </form>
+    </div>
+</main>
+{% endblock %}

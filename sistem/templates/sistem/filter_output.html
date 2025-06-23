@@ -1,0 +1,186 @@
+{% extends 'sistem/base.html' %}
+{% load static %}
+
+{% block title %}Filtered Recommendations{% endblock %}
+
+{% block navigation %}
+{# --- [VERSI FINAL] Blok Navigasi yang Benar dan Konsisten --- #}
+<header class="header">
+    <h1 class="header-title">REKOMENDASI BUKU</h1>
+    <nav class="nav-links">
+        <a href="{% url 'sistem:home' %}" class="nav-link">HOME</a>
+        <a href="{% if user.is_authenticated %}{% url 'sistem:dashboard_user' %}{% else %}{% url 'sistem:dashboard_public' %}{% endif %}" class="nav-link">DASHBOARD</a>
+        <a href="{% url 'sistem:input' %}" class="nav-link">RECOMMENDATION</a>
+
+        {% if user.is_authenticated %}
+            <div class="profile-section">
+                <a href="{% url 'sistem:favorite_list' %}" class="notification-icon" aria-label="Favorites">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </a>
+                <a href="{% url 'sistem:dashboard_user' %}" class="profile-avatar-link" aria-label="Lihat Dashboard">
+                    <div class="profile-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    </div>
+                </a>
+            </div>
+        {% else %}
+            <a href="{% url 'sistem:register' %}" class="header-button">REGISTER</a>
+            <a href="{% url 'sistem:login' %}" class="header-button">LOGIN</a>
+        {% endif %}
+    </nav>
+</header>
+<hr class="header-divider">
+{% endblock navigation %}
+
+
+{% block content %}
+<main class="dashboard-layout">
+    <section class="recommendations-result">
+        <div class="section-header">
+            <h2 class="section-title">Here Are Your Recommendations</h2>
+            <a href="{% url 'sistem:filter_input' %}" class="btn-try-again">Change Filters</a>
+        </div>
+
+        {# --- [PERBAIKAN UTAMA] Div ini juga dibuat cerdas --- #}
+        <div class="{% if recommendations|length == 1 %}single-book-wrapper{% else %}card-grid{% endif %}">
+            {% for book in recommendations %}
+                <div class="book-card">
+                    <img class="book-card-image" src="{{ book.image_url|default:'https://placehold.co/219x355' }}" alt="{{ book.title }}">
+                    <div class="book-card-content">
+                        <h3 class="book-card-title">{{ book.title }}</h3>
+                        <p class="book-card-author">By {{ book.author }}</p>
+                        <div class="book-card-meta">
+                            {# ... bagian meta rating & halaman ... #}
+                        </div>
+                        <div class="card-buttons">
+                            <a href="{% url 'sistem:book_detail' book.id %}" class="book-card-link-detail">DETAIL</a>
+                            <a href="{% if user.is_authenticated %}{% url 'sistem:add_to_favorite' book.id %}{% else %}{% url 'sistem:login' %}?next={% url 'sistem:add_to_favorite' book.id %}{% endif %}" class="book-card-actions">FAVORITE</a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="no-results-container">
+                    <h3>No Books Found</h3>
+                    <p>We couldn't find any books matching your specific filters. Try broadening your criteria!</p>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+</main>
+<style>
+
+.single-book-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem 0;
+}
+
+/* Membuat kartu menjadi lebih besar dan horizontal saat sendirian */
+.single-book-wrapper .book-card {
+    display: flex;
+    flex-direction: row; /* Tampilan menyamping: gambar di kiri, info di kanan */
+    max-width: 700px; /* Batas lebar kartu */
+    width: 100%;
+}
+
+/* Atur ukuran gambar di kartu tunggal */
+.single-book-wrapper .book-card-image {
+    width: 250px;
+    height: auto; /* Biarkan tinggi menyesuaikan */
+    flex-shrink: 0; /* Mencegah gambar menyusut */
+}
+
+/* Atur content di kartu tunggal */
+.single-book-wrapper .book-card-content {
+    text-align: left; /* Teks rata kiri */
+    justify-content: center; /* Menengahkan konten secara vertikal */
+}
+    /* Menengahkan layout utama agar rapi di layar lebar */
+    .dashboard-layout {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    /* Penyesuaian pada kartu buku */
+    .book-card {
+        background: #e6b800;
+        border: 1px solid #eee;
+        display: flex;
+        flex-direction: column; /* Memastikan content bisa didorong ke bawah */
+    }
+
+    .book-card-content {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1; /* Membuat content mengisi sisa ruang di kartu */
+    }
+
+    /* Container untuk detail rating dan halaman */
+    .book-card-meta {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-top: 1rem;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    /* Item detail individu (ikon + teks) */
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    /* Ikon SVG di dalam item meta */
+    .meta-item svg {
+        width: 1rem;
+        height: 1rem;
+        fill: currentColor;
+        opacity: 0.7;
+    }
+
+    /* Tombol View Detail menjadi lebih menonjol */
+    .book-card-link {
+        display: block; /* Diubah menjadi block */
+        margin-top: auto; /* PENTING: Mendorong tombol ini ke bagian bawah kartu */
+        padding: 0.7rem;
+        background-color: var(--accent-color);
+        color: var(--dark-text-color);
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .book-card-link:hover {
+        background-color: #e6b800;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+        .book-card-link-detail, .book-card-remove-link {
+        flex: 1; /* Membuat kedua tombol memiliki lebar yang sama */
+        padding: 0.7rem;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .book-card-link-detail {
+        background-color: var(--accent-color);
+        color: var(--dark-text-color);
+    }
+    .book-card-link-detail:hover {
+        background-color: #e6b800;
+    }
+
+
+
+</style>
+
+{% endblock %}

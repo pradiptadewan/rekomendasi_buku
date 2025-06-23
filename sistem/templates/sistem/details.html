@@ -1,0 +1,125 @@
+{% extends 'sistem/base.html' %}
+{% load static %}
+
+{% block title %}{{ book.title }} - Detail Buku{% endblock %}
+
+{% block navigation %}
+{# --- [VERSI FINAL] Blok Navigasi yang Benar dan Konsisten --- #}
+<header class="header">
+    <h1 class="header-title">REKOMENDASI BUKU</h1>
+    <nav class="nav-links">
+        <a href="{% url 'sistem:home' %}" class="nav-link">HOME</a>
+        <a href="{% if user.is_authenticated %}{% url 'sistem:dashboard_user' %}{% else %}{% url 'sistem:dashboard_public' %}{% endif %}" class="nav-link">DASHBOARD</a>
+        <a href="{% url 'sistem:input' %}" class="nav-link">RECOMMENDATION</a>
+
+        {% if user.is_authenticated %}
+            <div class="profile-section">
+                <a href="{% url 'sistem:favorite_list' %}" class="notification-icon" aria-label="Favorites">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </a>
+                <a href="{% url 'sistem:dashboard_user' %}" class="profile-avatar-link" aria-label="Lihat Dashboard">
+                    <div class="profile-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    </div>
+                </a>
+            </div>
+        {% else %}
+            <a href="{% url 'sistem:register' %}" class="header-button">REGISTER</a>
+            <a href="{% url 'sistem:login' %}" class="header-button">LOGIN</a>
+        {% endif %}
+    </nav>
+</header>
+<hr class="header-divider">
+{% endblock navigation %}
+
+{% block content %}
+<main class="details-page-layout">
+    <div class="details-grid">
+
+        {# --- KOLOM KIRI: GAMBAR BUKU --- #}
+        <div class="details-book-cover">
+            <img src="{{ book.image_url|default:'https://placehold.co/350x500' }}" alt="Cover of {{ book.title }}">
+        </div>
+
+        {# --- KOLOM KANAN: INFORMASI DETAIL --- #}
+        <div class="details-book-info">
+            <p class="details-genre">{{ book.genre|default:"No Genre" }}</p>
+            <h1 class="details-title">{{ book.title }}</h1>
+            <h2 class="details-author">by {{ book.author }}</h2>
+
+            {# [BARU] Bagian untuk menampilkan detail dari dataset #}
+            <div class="details-meta-grid">
+                <div class="meta-box">
+                    <span class="meta-label">Rating</span>
+                    <span class="meta-value">{{ book.rating|floatformat:1|default:"N/A" }} / 5.0</span>
+                </div>
+                <div class="meta-box">
+                    <span class="meta-label">Pages</span>
+                    <span class="meta-value">{{ book.page_count|floatformat:0|default:"N/A" }}</span>
+                </div>
+            </div>
+
+            <div class="details-actions">
+                <a href="{% if user.is_authenticated %}{% url 'sistem:add_to_favorite' book.id %}{% else %}{% url 'sistem:login' %}?next={% url 'sistem:add_to_favorite' book.id %}{% endif %}" class="details-button-favorite">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    Add to Favorites
+                </a>
+            </div>
+
+            <div class="details-synopsis">
+                <h3>Synopsis</h3>
+                <p>
+                    {{ book.synopsis|linebreaks|default:"Synopsis not available for this book." }}
+                </p>
+            </div>
+        </div>
+    </div>
+</main>
+
+{# --- CSS untuk Halaman Detail --- #}
+<style>
+    .details-page-layout { max-width: 1100px; margin: 2rem auto; padding: 1rem; }
+    .details-grid { display: grid; grid-template-columns: 300px 1fr; gap: 3rem; align-items: flex-start; }
+    .details-book-cover img { width: 100%; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .details-genre {
+        background-color: var(--accent-color);
+        color: var(--dark-text-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 1rem;
+    }
+    .details-title { font-size: 2.8rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.25rem; }
+    .details-author { font-size: 1.5rem; font-weight: 400; color: #555; margin-bottom: 2rem; }
+
+    .details-meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        background-color: #f9f9f9;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    .meta-box { text-align: center; }
+    .meta-label { display: block; font-size: 0.8rem; color: #777; margin-bottom: 0.25rem; }
+    .meta-value { font-size: 1.2rem; font-weight: 600; }
+
+    .details-actions { margin-bottom: 2rem; }
+    .details-button-favorite { display: inline-flex; align-items: center; gap: 0.75rem; background-color: var(--accent-color); color: var(--dark-text-color); padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: 600; text-decoration: none; transition: all 0.2s ease; }
+    .details-button-favorite:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(255, 204, 0, 0.4); }
+    .details-button-favorite svg { width: 1.2rem; height: 1.2rem; fill: currentColor; }
+
+    .details-synopsis h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.75rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; display: inline-block;}
+    .details-synopsis p { font-family: 'Inder', sans-serif; font-size: 1rem; line-height: 1.8; color: #333; }
+
+    @media (max-width: 768px) {
+        .details-grid { grid-template-columns: 1fr; }
+        .details-book-cover { max-width: 250px; margin: 0 auto 2rem auto; }
+        .details-book-info { text-align: center; }
+        .details-author { border: none; padding: 0; }
+    }
+</style>
+{% endblock %}

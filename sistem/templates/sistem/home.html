@@ -1,0 +1,44 @@
+{% extends 'sistem/base.html' %}
+{% load static %}
+
+{% block title %}Home - Rekomendasi Buku{% endblock %}
+
+{% block navigation %}
+<header class="header">
+    <h1 class="header-title">REKOMENDASI BUKU</h1>
+    <nav class="nav-links">
+        <a href="{% url 'sistem:home' %}" class="nav-link active">HOME</a>
+
+        {# --- Link Dashboard dibuat dinamis --- #}
+        {# Tujuannya berubah berdasarkan status login #}
+       {# Buka file template Anda (misal: home.html atau base.html) #}
+
+<a href="{% if user.is_authenticated %}{% url 'sistem:dashboard_user' %}{% else %}{% url 'sistem:dashboard' %}{% endif %}" class="nav-link">DASHBOARD</a>
+
+        {# --- Link Recommendation selalu tampil --- #}
+        <a href="{% url 'sistem:input' %}" class="nav-link">RECOMMENDATION</a>
+
+        {# --- Logika untuk tombol Login/Register atau Logout --- #}
+        {% if user.is_authenticated %}
+            {# Jika sudah login, tampilkan tombol LOGOUT #}
+            <a href="{% url 'sistem:logout' %}" class="header-button">LOGOUT</a>
+        {% else %}
+            {# Jika belum login, tampilkan tombol REGISTER dan LOGIN #}
+            <a href="{% url 'sistem:register' %}" class="header-button">REGISTER</a>
+            <a href="{% url 'sistem:login' %}" class="header-button">LOGIN</a>
+        {% endif %}
+    </nav>
+</header>
+<hr class="header-divider">
+{% endblock navigation %}
+
+{% block content %}
+<main class="home-hero">
+    <div class="hero-content">
+        <h2 class="hero-title">TEMUKAN BUKU FAVORITMU BERIKUTNYA</h2>
+        <p class="hero-subtitle">Jelajahi ribuan buku dari berbagai genre dan dapatkan rekomendasi yang disesuaikan dengan minatmu.</p>
+        <a href="{% url 'sistem:dashboard' %}" class="hero-button">JELAJAHI SEKARANG</a>
+    </div>
+    <img class="hero-image" src="{% static 'images/book1.jpeg' %}" alt="Book Image">
+</main>
+{% endblock %}

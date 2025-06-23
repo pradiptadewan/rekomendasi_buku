@@ -1,0 +1,83 @@
+{% extends 'sistem/base.html' %}
+{% load static %}
+
+{% block title %}Register - Rekomendasi Buku{% endblock %}
+
+{% block navigation %}
+<header class="header">
+    <h1 class="header-title">REKOMENDASI BUKU</h1>
+    <nav class="nav-links">
+        {# Gunakan app_name:url_name untuk merujuk ke URL #}
+        <a href="{% url 'sistem:home' %}" class="nav-link">HOME</a>
+        <a href="{% if user.is_authenticated %}{% url 'sistem:dashboard_user' %}{% else %}{% url 'sistem:dashboard' %}{% endif %}" class="nav-link">DASHBOARD</a>
+        <a href="{% url 'sistem:input' %}" class="nav-link">RECOMMENDATION</a>
+        <a href="{% url 'sistem:register' %}" class="header-button active">REGISTER</a>
+        <a href="{% url 'sistem:login' %}" class="header-button">LOGIN</a>
+    </nav>
+</header>
+<hr class="header-divider">
+{% endblock navigation %}
+
+{% block content %}
+<div class="auth-container">
+    <img class="auth-image" src="{% static 'images/book-reg.jpeg' %}" alt="Register Illustration">
+    <div class="auth-form-card">
+        <h2 class="auth-title">Register</h2>
+        {# PERBAIKAN: Gunakan {% url %} untuk link #}
+        <p class="auth-subtitle">Sudah memiliki akun? <a href="{% url 'sistem:login' %}" class="auth-link">Masuk</a></p>
+
+        {# PERBAIKAN KRITIS: Gunakan form dari Django #}
+        <form method="POST" action="{% url 'sistem:register' %}">
+            {% csrf_token %} {# <-- JANGAN LUPA INI #}
+
+            {# Menampilkan error form yang tidak terkait field tertentu #}
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {# Merender semua field form secara otomatis. Ini akan menggunakan widget dan class yang Anda atur di forms.py #}
+            {% for field in form %}
+                <div class="form-group">
+                    {{ field.label_tag }}
+                    {{ field }}
+
+                    {% for error in field.errors %}
+                        <p style="color: red; font-size: 0.9em;">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="form-button">REGISTER</button>
+        </form>
+    </div>
+</div>
+
+{# Tambahkan style untuk pesan error jika belum ada #}
+<style>
+    .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        text-align: center;
+        font-weight: bold;
+    }
+    .alert-error {
+        color: #721c24;
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+    }
+    /* Style untuk form-group agar rapi */
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: .5rem;
+    }
+</style>
+{% endblock %}

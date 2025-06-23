@@ -1,0 +1,1415 @@
+@import url('https://fonts.googleapis.com/css2?family=Abhaya+Libre:wght@400;500;700;800&family=Inknut+Antiqua:wght@300;400;500;600;700;800;900&family=Inder&display=swap');
+
+:root {
+    --primary-bg-color: #FAF3E0;
+    --accent-color: #FFCC00;
+    --dark-text-color: black;
+    --light-text-color: white;
+    --link-color: #0022FF;
+    --error-color: #FF0000;
+    --border-color: rgba(0, 0, 0, 0.50);
+}
+
+body {
+    margin: 0;
+    font-family: 'Inknut Antiqua', serif;
+    background-color: var(--primary-bg-color);
+    color: var(--dark-text-color);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 1rem; /* Reduced padding */
+    box-sizing: border-box;
+}
+
+.container {
+    width: 100%;
+    max-width: 1200px; /* Adjusted max width for desktop comfort */
+    background: var(--primary-bg-color);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    min-height: 700px; /* Reduced min height */
+    padding-bottom: 1.5rem; /* Reduced padding */
+}
+
+/* --- Header & Navigation Styles --- */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem; /* Reduced padding */
+    position: relative;
+    z-index: 10;
+}
+
+.header-title {
+    font-size: 1.8rem; /* Reduced font size */
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--dark-text-color);
+}
+
+.nav-links {
+    display: flex;
+    gap: 1.5rem; /* Reduced gap */
+    align-items: center;
+}
+
+.nav-link {
+    color: var(--dark-text-color);
+    font-size: 1.2rem; /* Reduced font size */
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    padding-bottom: 0.4rem; /* Reduced padding */
+    position: relative;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px; /* Reduced height */
+    background-color: var(--accent-color);
+    transition: width 0.3s ease;
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+    width: 100%;
+}
+
+.header-button {
+    background-color: var(--accent-color);
+    border-radius: 8px; /* Slightly smaller border radius */
+    padding: 0.7rem 1.2rem; /* Reduced padding */
+    color: var(--dark-text-color);
+    font-size: 1.2rem; /* Reduced font size */
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.header-button:hover {
+    background-color: #e6b800;
+    transform: translateY(-2px);
+}
+
+.header-divider {
+    width: calc(100% - 4rem); /* Adjusted based on padding */
+    height: 1px; /* Reduced height */
+    background: var(--dark-text-color);
+    opacity: 0.50;
+    margin: 0.8rem auto; /* Reduced margin */
+}
+
+/* --- Form Styles (Login, Register, Input) --- */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: stretch; /* PENTING: Membuat semua anak-nya sama tinggi */
+
+    margin: 3rem auto; /* Memberi jarak atas/bawah dan menengahkan */
+    max-width: 900px;  /* Batas lebar maksimum agar tidak terlalu lebar di desktop */
+    width: 100%;
+
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    overflow: hidden; /* Penting agar border-radius pada anak-nya terlihat */
+}
+
+.auth-image {
+    width: 45%; /* Sedikit lebih lebar untuk gambar */
+    object-fit: cover; /* Pastikan gambar menutupi area tanpa distorsi */
+    /* height: auto; dihapus agar tingginya mengikuti container */
+}
+
+.auth-form-card {
+    width: 55%;
+    background: var(--light-text-color);
+    padding: 2.5rem 3rem;
+    box-sizing: border-box; /* Agar padding tidak menambah lebar */
+
+    /* PENTING: Menjadikannya flex container vertikal */
+    display: flex;
+    flex-direction: column;
+}
+
+.auth-title {
+    font-size: 1.8rem;
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+}
+
+.auth-subtitle {
+    font-size: 0.8rem;
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 400;
+    margin-bottom: 2rem; /* Jarak lebih besar ke form */
+}
+
+.auth-link {
+    color: var(--link-color);
+    text-decoration: none;
+    font-weight: 400;
+    margin-left: 0.4rem;
+}
+
+.form-group {
+    margin-bottom: 1.2rem;
+}
+
+.form-label {
+    font-size: 0.8rem;
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 0.4rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.6rem 0;
+    border: none;
+    border-bottom: 1px solid var(--dark-text-color);
+    background: transparent;
+    font-size: 0.9rem;
+    font-family: 'Inknut Antiqua', serif;
+    color: var(--dark-text-color);
+    outline: none;
+}
+
+.form-checkbox-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.8rem;
+}
+
+.form-checkbox-label {
+    font-size: 0.75rem;
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.form-checkbox {
+    width: 0.9rem;
+    height: 0.9rem;
+    border: 1px solid var(--dark-text-color);
+    background: var(--light-text-color);
+    cursor: pointer;
+}
+
+.form-button {
+    margin-top: auto;
+    background: var(--accent-color);
+    border-radius: 8px;
+    padding: 0.8rem 1.8rem;
+    color: var(--dark-text-color);
+    font-size: 1.1rem;
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 700;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    width: fit-content;
+    align-self: flex-start;
+}
+
+.form-button:hover {
+    background-color: #e6b800;
+    transform: translateY(-2px);
+}
+
+.password-group {
+    position: relative;
+}
+
+.icon-eye {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(50%); /* Disesuaikan agar pas di tengah input */
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+
+    /* Gambar default (mata terbuka) */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+
+
+
+
+.form-input-with-icon .form-input {
+    padding-right: 2rem; /* Reduced space for icon */
+}
+
+/* --- [BARU] Gaya untuk pemisah dan tombol pilihan filter --- */
+
+/* Garis pemisah antara dua pilihan form */
+.form-divider {
+    border: none;
+    border-top: 1px solid #e0e0e0; /* Garis tipis abu-abu */
+    margin: 2rem 0; /* Memberi jarak atas dan bawah */
+}
+
+/* Judul sekunder untuk pilihan kedua */
+.auth-title-secondary {
+    font-size: 1.5rem; /* Sedikit lebih kecil dari judul utama */
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+}
+
+/* Tombol aksi sekunder (untuk filter) */
+.secondary-action-button {
+    display: block; /* Membuatnya memenuhi lebar */
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 1rem;
+    text-align: center;
+    padding: 0.6rem 1.5rem;
+
+    background-color: transparent;
+    color: var(--dark-text-color);
+    border: 1px solid var(--dark-text-color); /* Hanya garis tepi */
+    border-radius: 8px;
+
+    font-size: 1rem;
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.secondary-action-button:hover {
+    background-color: #f5f5f5; /* Sedikit warna latar saat di-hover */
+    transform: translateY(-2px);
+}
+
+/* --- [PERBAIKAN] Tampilan Halaman Filter Input --- */
+
+/* [BARU] Membuat layout 2 kolom untuk baris form */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Dua kolom dengan lebar sama */
+    gap: 1.5rem; /* Jarak antar kolom */
+    margin-bottom: 1.2rem;
+}
+
+/* [DIUBAH] Gaya Checkbox Genre menjadi Tombol/Tag */
+.genre-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem; /* Jarak antar tag genre */
+}
+
+.genre-checkbox-label {
+    display: inline-block; /* Ubah agar label bisa di-style sebagai blok */
+}
+
+/* Sembunyikan checkbox asli yang membosankan */
+.genre-checkbox {
+    display: none;
+}
+
+/* Dandani teks di sebelahnya (yang dibungkus span) agar terlihat seperti tombol */
+.genre-tag {
+    display: block;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 50px; /* Membuatnya berbentuk pil */
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-size: 0.9rem;
+}
+
+/* Beri efek hover pada tag genre */
+.genre-tag:hover {
+    background-color: #f0f0f0;
+    border-color: var(--dark-text-color);
+}
+
+/* "Sihir" CSS: Ubah tampilan .genre-tag jika checkbox di sebelahnya dicentang */
+.genre-checkbox:checked + .genre-tag {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: var(--dark-text-color);
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.recommendation-page-layout {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 4rem 1rem;
+}
+
+.recommendation-form-container {
+    width: 100%;
+    max-width: 650px; /* Lebar kartu diperkecil agar lebih padat */
+    margin: 0 auto;    /* Menengahkan kartu di dalam layout */
+
+    background-color: var(--light-text-color); /* Memberi latar belakang putih */
+    padding: 2.5rem 3rem; /* Padding di dalam kartu */
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08); /* Memberi efek bayangan */
+}
+
+.recommendation-form-container .form-button {
+    margin-top: 2rem; /* Jarak dari form group terakhir */
+    display: block;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0.8rem 2rem;
+}
+
+.form-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.form-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.form-subtitle {
+    font-size: 1rem;
+    color: #666; /* Warna sub-judul dibuat lebih lembut */
+    max-width: 450px;
+    margin: 0 auto;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+/* --- [BARU] Gaya untuk Paginasi --- */
+.pagination {
+    margin: 2.5rem 0 1rem 0;
+    text-align: center;
+}
+
+.pagination .step-links a {
+    padding: 0.5rem 1rem;
+    margin: 0 0.25rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    color: var(--dark-text-color);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.pagination .step-links a:hover {
+    background-color: #f5f5f5;
+    border-color: #ccc;
+}
+
+.pagination .current-page {
+    margin: 0 1rem;
+    font-weight: 600;
+    color: #555;
+}
+
+/* [DIUBAH] Menengahkan grup genre */
+.genre-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center; /* KUNCI: Membuat tag genre berada di tengah */
+    gap: 0.75rem;
+}
+
+/* Gaya Checkbox Genre (Tag), tidak berubah */
+.genre-checkbox-label {
+    display: inline-block;
+}
+.genre-checkbox {
+    display: none;
+}
+.genre-tag {
+    display: block;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-size: 0.9rem;
+}
+.genre-tag:hover {
+    background-color: #f0f0f0;
+    border-color: var(--dark-text-color);
+}
+.genre-checkbox:checked + .genre-tag {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: var(--dark-text-color);
+    font-weight: 600;
+}
+
+/* Penataan tombol utama, tidak berubah */
+.recommendation-form-container .form-button {
+    margin-top: 2.5rem;
+    display: block;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0.8rem 2.5rem; /* Dibuat sedikit lebih besar agar menonjol */
+}
+
+/* ----------------------------------------------------------------- */
+/* Gaya untuk Halaman Output (tetap sama seperti sebelumnya, disertakan lagi agar lengkap) */
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.btn-try-again {
+    background-color: var(--dark-text-color);
+    color: var(--light-text-color);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: opacity 0.3s ease;
+}
+
+.btn-try-again:hover {
+    opacity: 0.8;
+}
+
+.no-results-container {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 2rem;
+    background-color: #fafafa;
+    border: 1px dashed #ddd;
+    border-radius: 12px;
+}
+
+.no-results-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    fill: #ccc;
+    margin-bottom: 1rem;
+}
+
+
+/* --- Home Page Specific Styles --- */
+.home-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3rem 2rem; /* Reduced padding */
+}
+
+.hero-content {
+    flex: 1;
+    max-width: 55%; /* Adjusted max-width */
+}
+
+.hero-title {
+    font-size: 3rem; /* Reduced font size */
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 1.5rem; /* Reduced margin */
+}
+
+.hero-subtitle {
+    font-size: 1.2rem; /* Reduced font size */
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 400;
+    line-height: 1.6; /* Adjusted line height */
+    margin-bottom: 2rem; /* Reduced margin */
+}
+
+.hero-button {
+    background: var(--accent-color);
+    border-radius: 18px; /* Slightly smaller border radius */
+    padding: 0.9rem 2rem; /* Reduced padding */
+    color: var(--dark-text-color);
+    font-size: 1.3rem; /* Reduced font size */
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 800;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.hero-button:hover {
+    background-color: #e6b800;
+    transform: translateY(-2px);
+}
+
+.hero-image {
+    width: 40%; /* Adjusted width */
+    height: auto;
+    max-height: 500px; /* Reduced max height */
+    object-fit: contain;
+}
+
+/* --- Dashboard & Output Page Specific Styles --- */
+.dashboard-layout {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 2rem; /* Reduced padding */
+    gap: 2.5rem; /* Reduced gap */
+}
+
+.section-title {
+    font-size: 1.3rem; /* Reduced font size */
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 300;
+    margin-bottom: 1rem; /* Reduced margin */
+    position: relative;
+    padding-left: 1.2rem; /* Reduced padding */
+}
+
+.section-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px; /* Reduced thickness */
+    height: 100%;
+    background-color: var(--dark-text-color);
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Adjusted minmax for slightly smaller cards */
+    gap: 1.5rem; /* Reduced gap */
+}
+
+.book-card {
+    background: var(--accent-color);
+    border-radius: 20px; /* Slightly smaller border radius */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.book-card:hover {
+    transform: translateY(-5px);
+}
+
+.book-card-image {
+    width: 100%;
+    height: 355px; /* Reduced height for images */
+    object-fit: cover;
+    border-radius: 20px; /* Slightly smaller border radius */
+    padding: 0.8rem; /* Reduced padding */
+    box-sizing: border-box;
+}
+
+.book-card-content {
+    padding: 0.8rem 1.2rem; /* Reduced padding */
+    text-align: center;
+}
+
+.book-card-title {
+    font-size: 1.5rem; /* Increased from 1rem */
+    font-family: 'Abhaya Libre ExtraBold', serif;
+    font-weight: 800;
+    margin-bottom: 0.8rem; /* Increased from 0.4rem */
+    height: auto; /* Changed from fixed height for better flexibility */
+    min-height: 3rem; /* Minimum height to maintain consistency */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    color:  #2c3e50;
+    background: black;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: all 0.3s ease;
+}
+
+.book-card-title:hover {
+    transform: translateY(-2px);
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.book-card-author {
+    font-size: 1.1rem; /* Increased from 0.8rem */
+    font-family: 'Abhaya Libre Medium', serif;
+    font-weight: 500;
+    margin-bottom: 1.2rem; /* Increased from 0.8rem */
+    color: var(--dark-text-color, #5a6c7d);
+    position: relative;
+    padding-left: 1rem;
+    transition: color 0.3s ease;
+}
+
+.book-card-author::before {
+    content: '✦';
+    position: absolute;
+    left: 0;
+    color: #f39c12;
+    font-size: 0.9rem;
+    animation: sparkle 2s infinite alternate;
+}
+
+.book-card-author:hover {
+    color: #2c3e50;
+    transform: translateX(5px);
+}
+
+.book-card-link {
+    color: var(--link-color, #3498db);
+    font-size: 1rem; /* Increased from 0.7rem */
+    font-family: 'Abhaya Libre Medium', serif;
+    font-weight: 600; /* Increased font weight */
+    text-decoration: none;
+    padding: 0.8rem 1.5rem;
+    border: 2px solid transparent;
+    border-radius: 25px;
+    background: linear-gradient(45deg, #3498db, #2ecc71);
+    background-size: 200% 200%;
+    color: white;
+    display: inline-block;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.book-card-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.6s;
+}
+
+.book-card-link:hover {
+    background-position: 100% 0;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+    color: white;
+    text-decoration: none;
+}
+
+.book-card-actions {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    border-radius: 50px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    padding: 1rem 1.8rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.8rem;
+    margin: 1.5rem auto 0;
+    width: fit-content;
+    font-size: 1rem;
+    font-family: 'Abhaya Libre Medium', serif;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(243, 156, 18, 0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+
+.book-card-actions::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.6s ease;
+}
+
+.book-card-actions:hover {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 12px 30px rgba(243, 156, 18, 0.4);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+
+.icon-heart {
+    width: 1.3rem;
+    height: 1.2rem;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') no-repeat center center;
+    background-size: contain;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+    transition: all 0.3s ease;
+    animation: heartbeat 2s infinite;
+}
+
+.show-more-container {
+    text-align: center; /* KUNCI UTAMA: Baris ini akan menengahkan semua elemen di dalamnya */
+    margin-top: 2.5rem; /* Memberi jarak dari grid buku di atasnya */
+    margin-bottom: 1rem; /* Memberi jarak ke bagian bawah halaman */
+}
+
+.show-more-link {
+    color: var(--link-color);
+    font-size: 1.2rem; /* Reduced font size */
+    font-family: 'Abhaya Libre ExtraBold', serif;
+    font-weight: 800;
+    text-decoration: none;
+    display: block;
+    text-align: center;
+    margin-top: 1.5rem; /* Reduced margin */
+    position: relative;
+    padding-bottom: 0.4rem; /* Reduced padding */
+}
+
+.show-more-link::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 0;
+    width: 100%;
+    max-width: 120px; /* Adjusted max-width */
+    height: 1px;
+    background: var(--link-color);
+}
+
+/* Dashboard Admin Styles */
+.profile-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* Jarak antara ikon hati dan grup profil */
+}
+
+.profile-avatar-link {
+    display: flex;
+    flex-direction: column; /* KUNCI UTAMA #1: Menumpuk ikon dan nama ke bawah */
+    align-items: center;   /* KUNCI UTAMA #2: Menengahkan tumpukan tersebut */
+    text-decoration: none; /* Menghilangkan garis bawah dari link */
+    gap: 4px;              /* Jarak antara lingkaran avatar dan teks username */
+    color: inherit;        /* Mewarisi warna teks agar tidak biru */
+}
+
+.profile-avatar {
+    width: 2.2rem;
+    height: 2.2rem;
+    background-color: var(--accent-color);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    transition: transform 0.2s ease;
+}
+
+.profile-avatar-link:hover .profile-avatar {
+    transform: scale(1.1);
+}
+
+.profile-avatar svg {
+    width: 65%;
+    height: 65%;
+    fill: var(--light-text-color);
+}
+.profile-username {
+    font-size: 0.7rem;
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 500;
+    color: var(--dark-text-color);
+    line-height: 1; /* Memastikan tinggi baris tidak terlalu besar */
+
+    /* Mencegah teks nama yang panjang merusak layout */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+}
+
+.username {
+    font-size: 0.6rem; /* Reduced font size */
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 500;
+}
+
+.notification-icon {
+    width: 2.2rem;
+    height: 2.2rem;
+    background-color: var(--accent-color);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    transition: transform 0.2s ease;
+}
+
+.notification-icon:hover {
+    transform: scale(1.1);
+}
+
+.notification-icon svg {
+    width: 50%;
+    height: 50%;
+    fill: var(--error-color);
+}
+
+.notification-icon svg {
+    width: 50%;
+    height: 50%;
+    fill: var(--error-color);
+}
+
+.search-bar {
+    background: #FFECC3;
+    border-radius: 40px;
+    border: 1px solid var(--dark-text-color);
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 200px;
+    margin-top: -15px;
+    margin-bottom: -25px;
+}
+
+.search-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 1rem; /* Reduced font size */
+    font-family: 'Inder', serif;
+    color: var(--dark-text-color);
+    width: 100%;
+}
+
+.search-input::placeholder {
+    opacity: 0.5;
+}
+
+.search-icon {
+    width: 1.3rem; /* Reduced size */
+    height: 1.3rem; /* Reduced size */
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="black"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>') no-repeat center center;
+    background-size: contain;
+    opacity: 0.6;
+}
+
+/* Dashboard User specific sections (adjust as needed if they are too large) */
+.borrowing-history,
+.popular-books {
+    margin-bottom: 2.5rem; /* Reduced margin */
+}
+
+/* --- Output Page Specific Styles --- */
+.output-section-description {
+    font-size: 1rem; /* Reduced font size */
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 300;
+    line-height: 1.6; /* Adjusted line height */
+    margin-bottom: 1.5rem; /* Reduced margin */
+}
+
+.output-book-card .book-card-image {
+    height: 300px; /* Reduced height for output page images */
+}
+
+.output-book-card-footer {
+    background: var(--dark-text-color);
+    padding: 0.8rem 1.2rem; /* Reduced padding */
+    border-bottom-left-radius: 20px; /* Slightly smaller border radius */
+    border-bottom-right-radius: 20px; /* Slightly smaller border radius */
+    color: var(--light-text-color);
+    text-align: center;
+}
+
+.output-book-card-title {
+    font-size: 1.1rem; /* Reduced font size */
+    font-family: 'Abhaya Libre ExtraBold', serif;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 0.4rem; /* Reduced margin */
+}
+
+.output-book-card-author {
+    font-size: 0.9rem; /* Reduced font size */
+    font-family: 'Abhaya Libre Medium', serif;
+    font-weight: 500;
+    margin-bottom: 0.8rem; /* Reduced margin */
+    color: var(--light-text-color);
+}
+
+.output-book-card .book-card-link {
+    color: var(--accent-color);
+}
+
+.rating-stars {
+    display: flex;
+    justify-content: center;
+    gap: 0.15rem; /* Reduced gap */
+    margin-bottom: 0.8rem; /* Reduced margin */
+}
+
+.star-icon {
+    width: 1rem; /* Reduced size */
+    height: 1rem; /* Reduced size */
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFB300"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>') no-repeat center center;
+    background-size: contain;
+}
+
+/* --- Input Page Specific Styles --- */
+.input-form-description {
+    font-size: 0.7rem; /* Reduced font size */
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 300;
+    margin-bottom: 1.5rem; /* Reduced margin */
+}
+
+.input-form-genre-section {
+    margin-bottom: 1.5rem; /* Reduced margin */
+}
+
+.genre-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem; /* Reduced gap */
+    margin-top: 0.4rem; /* Reduced margin */
+}
+
+.genre-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem; /* Reduced gap */
+    font-size: 0.8rem; /* Reduced font size */
+    font-family: 'Abhaya Libre Medium', serif;
+    font-weight: 500;
+}
+
+.genre-checkbox {
+    width: 0.9rem; /* Reduced size */
+    height: 0.9rem; /* Reduced size */
+    border: 1px solid var(--dark-text-color);
+    border-radius: 2px; /* Slightly smaller border radius */
+    background: var(--light-text-color);
+    cursor: pointer;
+}
+
+/* --- Details Page Specific Styles --- */
+.details-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 1.5rem; /* Reduced gap */
+    padding: 1.5rem 2rem; /* Reduced padding */
+    align-items: flex-start;
+}
+
+.details-book-image-card {
+    background: var(--accent-color);
+    border-radius: 20px; /* Slightly smaller border radius */
+    padding-bottom: 0.8rem; /* Reduced padding */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.details-book-image {
+    width: 100%;
+    height: 400px; /* Reduced height for consistency */
+    object-fit: cover;
+    border-radius: 20px; /* Slightly smaller border radius */
+    padding: 1.2rem; /* Reduced padding */
+    box-sizing: border-box;
+}
+
+.details-book-footer {
+    background: var(--dark-text-color);
+    padding: 0.8rem 1.2rem; /* Reduced padding */
+    border-bottom-left-radius: 20px; /* Slightly smaller border radius */
+    border-bottom-right-radius: 20px; /* Slightly smaller border radius */
+    color: var(--light-text-color);
+    text-align: center;
+}
+
+.details-add-to-favorite {
+    background: var(--accent-color);
+    border-radius: 40px; /* Slightly smaller border radius */
+    border: 1px solid var(--border-color);
+    padding: 0.6rem 1.2rem; /* Reduced padding */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem; /* Reduced gap */
+    margin: 0.8rem auto 0; /* Reduced margin */
+    width: fit-content;
+    font-size: 1rem; /* Reduced font size */
+    font-family: 'Abhaya Libre Medium', serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.details-add-to-favorite:hover {
+    background-color: #e6b800;
+}
+
+.details-content-card {
+    background: rgba(255, 236, 195, 0.50);
+    border-radius: 20px; /* Slightly smaller border radius */
+    border: 1px solid var(--dark-text-color);
+    padding: 1.5rem 2rem; /* Reduced padding */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.details-heading {
+    font-size: 1.8rem; /* Reduced font size */
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 300;
+    margin-bottom: 1.5rem; /* Reduced margin */
+    text-align: center;
+}
+
+.detail-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 0.8rem; /* Reduced margin */
+    gap: 0.8rem; /* Reduced gap */
+}
+
+.detail-label, .detail-colon, .detail-value {
+    font-size: 1.2rem; /* Reduced font size */
+    font-family: 'Abhaya Libre ExtraBold', serif;
+    font-weight: 800;
+    line-height: 1.4; /* Adjusted line height */
+}
+
+.detail-label {
+    min-width: 80px; /* Adjusted min-width */
+}
+
+.details-rating-section {
+    display: flex;
+    align-items: center;
+    margin-top: 1.2rem; /* Reduced margin */
+    gap: 0.8rem; /* Reduced gap */
+}
+
+.details-rating-stars {
+    display: flex;
+    gap: 0.15rem; /* Reduced gap */
+}
+
+.details-rating-value {
+    font-size: 1.2rem; /* Reduced font size */
+    font-family: 'Abhaya Libre ExtraBold', serif;
+    font-weight: 800;
+}
+
+/* General utility classes (can be applied across pages) */
+.text-center {
+    text-align: center;
+}
+.margin-top-large {
+    margin-top: 2rem; /* Reduced margin */
+}
+.full-width-line {
+    width: 100%;
+    height: 1px; /* Reduced height */
+    border-top: 1px solid var(--dark-text-color); /* Reduced border */
+    opacity: 0.5;
+    margin: 1.5rem 0; /* Reduced margin */
+}
+
+/* For the rotated lines in Dashboard-User */
+.vertical-line-left {
+    left: 30px; /* Adjusted based on new padding */
+    top: 10rem; /* Adjusted start position */
+    height: 50px; /* Reduced height */
+    width: 3px; /* Reduced thickness */
+}
+
+.vertical-line-right {
+    left: 30px; /* Adjusted based on new padding */
+    top: 30rem; /* Adjusted start position */
+    height: 50px; /* Reduced height */
+    width: 3px; /* Reduced thickness */
+}
+
+/* General button styles */
+.btn {
+    display: inline-block;
+    padding: 0.7rem 1.2rem; /* Reduced padding */
+    border-radius: 8px; /* Slightly smaller border radius */
+    text-decoration: none;
+    font-family: 'Inknut Antiqua', serif;
+    font-weight: 500;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary {
+    background-color: var(--accent-color);
+    color: var(--dark-text-color);
+}
+
+.btn-primary:hover {
+    background-color: #e6b800;
+    transform: translateY(-2px);
+}
+
+/* --- Media Queries for Mobile Devices --- */
+@media (max-width: 768px) {
+    body {
+        padding: 0.5rem; /* Even less padding on mobile */
+    }
+
+    .container {
+        min-height: auto; /* Allow height to adjust */
+        padding-bottom: 1rem;
+        box-shadow: none; /* Remove shadow on smaller screens for cleaner look */
+    }
+
+    .header {
+        flex-direction: column;
+        padding: 1rem;
+        gap: 0.8rem;
+    }
+
+    .header-title {
+        font-size: 1.8rem;
+        text-align: center;
+    }
+
+    .nav-links {
+        gap: 1rem;
+        flex-wrap: wrap; /* Allow nav links to wrap */
+        justify-content: center;
+    }
+
+    .nav-link, .header-button {
+        font-size: 1rem;
+        padding: 0.6rem 1rem;
+    }
+
+    .header-button {
+        width: 100%;
+        text-align: center;
+        margin-top: 0.5rem;
+    }
+
+    .header-divider {
+        width: calc(100% - 2rem);
+        margin: 0.5rem auto;
+    }
+
+
+    .auth-container {
+        flex-direction: column; /* Stack image and form vertically */
+        min-height: auto;
+        padding: 1rem;
+    }
+
+    .auth-image {
+        width: 100%;
+        height: 200px; /* Fixed height for mobile image */
+        border-radius: 12px 12px 0 0; /* Rounded top corners */
+    }
+
+    .auth-form-card {
+        width: 100%;
+        padding: 2rem 1.5rem;
+        border-radius: 0 0 12px 12px; /* Rounded bottom corners */
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Re-add shadow for form card */
+    }
+
+    .auth-title {
+        font-size: 1.5rem;
+    }
+
+    .auth-subtitle {
+        font-size: 0.75rem;
+    }
+
+    .form-button {
+        width: 100%; /* Full width button */
+    }
+
+    .home-hero {
+        flex-direction: column;
+        padding: 2rem 1.5rem;
+        text-align: center;
+    }
+
+    .hero-content {
+        max-width: 100%;
+    }
+
+    .hero-title {
+        font-size: 2.5rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1.1rem;
+    }
+
+    .hero-image {
+        width: 80%; /* Smaller image on mobile */
+        margin-top: 1.5rem;
+    }
+
+    .dashboard-layout {
+        padding: 1rem 1.5rem;
+        gap: 2rem;
+    }
+
+    .card-grid {
+        grid-template-columns: 1fr; /* Single column for mobile */
+    }
+
+    .output-book-card .book-card-image {
+        height: 250px; /* Adjusted height for mobile output card */
+    }
+
+    .details-grid {
+        grid-template-columns: 1fr; /* Single column for details on mobile */
+        padding: 1rem 1.5rem;
+    }
+
+    .details-book-image-card {
+        padding-bottom: 0.5rem;
+    }
+
+    .details-book-image {
+        height: 300px; /* Adjusted height for mobile details image */
+        padding: 1rem;
+    }
+
+    .details-content-card {
+        padding: 1.5rem 1rem;
+    }
+
+    .details-heading {
+        font-size: 1.5rem;
+    }
+
+    .detail-item {
+        flex-direction: column; /* Stack label and value */
+        align-items: flex-start;
+        gap: 0.2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .detail-label, .detail-colon, .detail-value {
+        font-size: 1rem;
+        line-height: 1.2;
+    }
+
+    .detail-label {
+        min-width: unset; /* Remove min-width */
+    }
+
+    .details-rating-section {
+        flex-direction: column;
+        align-items: center;
+        margin-top: 1rem;
+        gap: 0.5rem;
+    }
+
+    .details-rating-value {
+        font-size: 1.1rem;
+    }
+
+    .vertical-line-left, .vertical-line-right {
+        display: none; /* Hide rotated lines on mobile */
+    }
+}
+
+@media (max-width: 480px) {
+    .header-title {
+        font-size: 1.5rem;
+    }
+
+    .nav-links {
+        gap: 0.8rem;
+    }
+
+    .nav-link, .header-button {
+        font-size: 0.9rem;
+    }
+
+    .auth-title {
+        font-size: 1.3rem;
+    }
+
+    .hero-title {
+        font-size: 2rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+
+    .hero-button {
+        font-size: 1.1rem;
+        padding: 0.8rem 1.5rem;
+    }
+
+    .book-card-title {
+        font-size: 0.9rem;
+    }
+
+    .book-card-author {
+        font-size: 0.75rem;
+    }
+
+    .book-card-actions {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+    }
+
+    .output-book-card-title {
+        font-size: 1rem;
+    }
+
+    .output-book-card-author {
+        font-size: 0.8rem;
+    }
+}

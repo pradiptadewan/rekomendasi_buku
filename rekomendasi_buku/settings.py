@@ -77,7 +77,11 @@ WSGI_APPLICATION = 'rekomendasi_buku.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': 'rekomendasi-buku',  # Nama database Anda
+        'USER': 'postgres',           # Username database Anda
+        'PASSWORD': 'dewan123',   # Password database Anda
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -122,3 +126,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Kunci API untuk mengakses Google Books
+GOOGLE_BOOKS_API_KEY = 'AIzaSyCfWVXAn5OInq_qhch_nd3AXfzZLfJ7M9g'

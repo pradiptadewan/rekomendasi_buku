@@ -1,0 +1,175 @@
+{% extends 'sistem/base.html' %}
+{% load static %}
+
+{% block title %}Get Recommendations - Rekomendasi Buku{% endblock %}
+
+{% block navigation %}
+    {# --- Blok Navigasi versi final Anda diletakkan di sini --- #}
+    {# Pastikan ini adalah versi navigasi yang sudah benar dan konsisten #}
+    <header class="header">
+        <h1 class="header-title">REKOMENDASI BUKU</h1>
+        <nav class="nav-links">
+            <a href="{% url 'sistem:home' %}" class="nav-link">HOME</a>
+            <a href="{% if user.is_authenticated %}{% url 'sistem:dashboard_user' %}{% else %}{% url 'sistem:dashboard' %}{% endif %}" class="nav-link">DASHBOARD</a>
+            <a href="{% url 'sistem:input' %}" class="nav-link active">RECOMMENDATION</a>
+
+            {% if user.is_authenticated %}
+                <div class="profile-section">
+                    <a href="{% url 'sistem:favorite_list' %}" class="notification-icon" aria-label="Favorites">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    </a>
+                    <a href="{% url 'sistem:dashboard_user' %}" class="profile-avatar-link" aria-label="Lihat Dashboard">
+                        <div class="profile-avatar">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                        </div>
+                    </a>
+                </div>
+            {% else %}
+                <a href="{% url 'sistem:register' %}" class="header-button">REGISTER</a>
+                <a href="{% url 'sistem:login' %}" class="header-button">LOGIN</a>
+            {% endif %}
+        </nav>
+    </header>
+    <hr class="header-divider">
+{% endblock navigation %}
+
+
+{% block content %}
+{# --- AWAL LOGIKA UTAMA --- #}
+
+{% if user.is_authenticated %}
+
+    {# JIKA PENGGUNA SUDAH LOGIN, TAMPILKAN FORM REKOMENDASI #}
+    {# (Kode ini tidak diubah, karena sudah berfungsi dengan baik) #}
+    <div class="auth-container">
+        <img class="auth-image" src="{% static 'images/input.jpeg' %}" alt="Recommendation Illustration">
+        <div class="auth-form-card">
+            <div>
+                <h2 class="auth-title">Find By Book Title</h2>
+                <p class="input-form-description">Enter a book you like, and we'll find similar ones for you!</p>
+                <form method="POST" action="{% url 'sistem:recommend' %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="book_title" class="form-label">Book Title</label>
+                        <input type="text" id="book_title" name="book_title" class="form-input" required placeholder="Contoh: The Da Vinci Code">
+                    </div>
+                    <button type="submit" class="form-button">FIND SIMILAR BOOKS</button>
+                </form>
+            </div>
+            <hr class="form-divider">
+            <div class="advanced-filter-section">
+                <h3 class="auth-title-secondary">Or Use Advanced Filters</h3>
+                <p class="input-form-description">Find books based on your favorite genres, rating, and more.</p>
+                <a href="{% url 'sistem:filter_input' %}" class="secondary-action-button">USE ADVANCED FILTER</a>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+
+    {# [PERBAIKAN] TAMPILAN BARU YANG LEBIH MENARIK JIKA BELUM LOGIN #}
+    <main class="recommendation-page-layout">
+        <div class="unlock-feature-prompt">
+            <div class="unlock-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>
+            </div>
+            <h2 class="unlock-title">Unlock Personalized Recommendations</h2>
+            <p class="unlock-text">
+                Log in or create an account to get book recommendations tailored just for you, based on your favorite titles and genres.
+            </p>
+            <div class="unlock-actions">
+                <a href="{% url 'sistem:login' %}" class="unlock-button primary">LOGIN TO UNLOCK</a>
+                <a href="{% url 'sistem:register' %}" class="unlock-button secondary">Create Account</a>
+            </div>
+        </div>
+    </main>
+
+{% endif %}
+{# --- AKHIR LOGIKA UTAMA --- #}
+
+{# --- [BARU] CSS untuk tampilan 'Unlock Feature' yang lebih menarik --- #}
+<style>
+    .unlock-feature-prompt {
+        max-width: 500px;
+        margin: 4rem auto;
+        padding: 2.5rem;
+        background: linear-gradient(145deg, #ffffff, #f9f9f9);
+        border: 1px solid #e8e8e8;
+        border-radius: 16px;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.07);
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .unlock-icon {
+        width: 60px;
+        height: 60px;
+        margin: 0 auto 1.5rem auto;
+        background-color: var(--accent-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--dark-text-color);
+    }
+
+    .unlock-icon svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    .unlock-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        line-height: 1.3;
+    }
+
+    .unlock-text {
+        color: #555;
+        line-height: 1.7;
+        margin-bottom: 2.5rem;
+    }
+
+    .unlock-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .unlock-button {
+        padding: 0.9rem 1.5rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.2s ease-in-out;
+        border: 1px solid transparent;
+        font-size: 1rem;
+    }
+
+    .unlock-button.primary {
+        background-color: var(--accent-color);
+        color: var(--dark-text-color);
+    }
+    .unlock-button.primary:hover {
+        background-color: #e6b800;
+        box-shadow: 0 4px 15px rgba(255, 204, 0, 0.4);
+        transform: translateY(-2px);
+    }
+
+    .unlock-button.secondary {
+        background-color: transparent;
+        color: #444;
+        border-color: #ddd;
+    }
+    .unlock-button.secondary:hover {
+        background-color: #f5f5f5;
+        border-color: #ccc;
+    }
+</style>
+{% endblock %}

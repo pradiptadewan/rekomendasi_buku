@@ -1,0 +1,57 @@
+{% extends 'sistem/base.html' %}
+{% load static %}
+{% block title %}Login - Rekomendasi Buku{% endblock %}
+
+{% block navigation %}
+<header class="header">
+    <h1 class="header-title">REKOMENDASI BUKU</h1>
+    <nav class="nav-links">
+        <a href="{% url 'sistem:home' %}" class="nav-link">HOME</a>
+        <a href="{% if user.is_authenticated %}{% url 'sistem:dashboard_user' %}{% else %}{% url 'sistem:dashboard' %}{% endif %}" class="nav-link">DASHBOARD</a>
+        <a href="{% url 'sistem:input' %}" class="nav-link">RECOMMENDATION</a>
+        <a href="{% url 'sistem:register' %}" class="header-button">REGISTER</a>
+        <a href="{% url 'sistem:login' %}" class="header-button active">LOGIN</a>
+    </nav>
+</header>
+<hr class="header-divider">
+{% endblock navigation %}
+
+
+{% block content %}
+<div class="auth-container">
+    <img class="auth-image" src="{% static 'images/book-login.jpeg' %}" alt="Login Illustration">
+    <div class="auth-form-card">
+        <h2 class="auth-title">Login</h2>
+        <p class="auth-subtitle">Belum memiliki akun? <a href="{% url 'sistem:register' %}" class="auth-link">Daftar</a></p>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}" role="alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST" action="{% url 'sistem:login' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username_email" class="form-label">Username</label>
+                <input type="text" id="username_email" name="username_email" class="form-input" required>
+            </div>
+
+            {# Menggunakan class 'password-group' dan 'form-input-with-icon' #}
+            <div class="form-group password-group form-input-with-icon">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" id="password" name="password" class="form-input" required>
+                <span class="icon-eye" id="togglePassword"></span>
+            </div>
+
+            <div class="form-checkbox-group">
+                <label class="form-checkbox-label">
+                    <input type="checkbox" name="remember_me" class="form-checkbox"> Ingat Saya
+                </label>
+                <a href="#" class="auth-link">Lupa Password?</a>
+            </div>
+            <button type="submit" class="form-button">LOGIN</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

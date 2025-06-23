@@ -1,0 +1,23 @@
+{# Contoh di file base.html atau file header lainnya #}
+<header class="header">
+    <h1 class="header-title">REKOMENDASI BUKU</h1>
+    <nav class="nav-links">
+        <a href="{% url 'home' %}" class="nav-link">HOME</a>
+
+        {# Gunakan logika if untuk menampilkan link yang sesuai #}
+        {% if user.is_authenticated %}
+            {# --- TAMPILKAN INI JIKA PENGGUNA SUDAH LOGIN --- #}
+            <a href="{% url 'dashboard_user' %}" class="nav-link">DASHBOARD</a>
+            <a href="{% url 'input' %}" class="nav-link">RECOMMENDATION</a>
+
+            {# INILAH TOMBOL LOGOUT KITA #}
+            <a href="{% url 'logout' %}" class="header-button">LOGOUT</a>
+
+        {% else %}
+            {# --- TAMPILKAN INI JIKA PENGGUNA BELUM LOGIN --- #}
+            <a href="{% url 'register' %}" class="header-button">REGISTER</a>
+            <a href="{% url 'login' %}" class="header-button">LOGIN</a>
+        {% endif %}
+    </nav>
+</header>
+<hr class="header-divider">
