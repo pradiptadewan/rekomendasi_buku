@@ -1,0 +1,4 @@
+# nixpacks.toml
+
+[phases.setup]
+aptPkgs = ["libsasl2-dev", "libkrb5-dev"]
