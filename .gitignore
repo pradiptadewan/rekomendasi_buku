@@ -1,1 +1,15 @@
-.venv/\n.idea/\ndb.sqlite3\n__pycache__/
+
+.env
+
+.venv/
+venv/
+
+db.sqlite3
+
+# File-file cache Python
+__pycache__/
+*.pyc
+
+# File media & statis yang dikumpulkan (jika ada)
+/media/
+/static/

@@ -15,9 +15,6 @@ from django.contrib import staticfiles
 from dotenv import load_dotenv
 from pathlib import Path
 
-from decouple import config
-import dj_database_url
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
@@ -27,13 +24,13 @@ load_dotenv()
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = 'django-insecure-7b#uxin7@4kzcpe+cnjlw+s&4e9s5gstw-6!1)siod#9%hytoe'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = True
 
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -56,7 +53,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware'
 ]
 
 ROOT_URLCONF = 'rekomendasi_buku.urls'
@@ -83,23 +79,16 @@ WSGI_APPLICATION = 'rekomendasi_buku.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': 'rekomendasi-buku',  # Nama database Anda
-#         'USER': 'postgres',           # Username database Anda
-#         'PASSWORD': 'dewan123',   # Password database Anda
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
-# }
-
 DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL')
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'rekomendasi-buku',  # Nama database Anda
+        'USER': 'postgres',           # Username database Anda
+        'PASSWORD': 'dewan123',   # Password database Anda
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
 }
-
 
 
 # Password validation
