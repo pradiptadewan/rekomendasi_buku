@@ -1,8 +1,7 @@
-
-.env
-
+# Virtual Environment
 .venv/
 venv/
+
 
 db.sqlite3
 
@@ -13,3 +12,5 @@ __pycache__/
 # File media & statis yang dikumpulkan (jika ada)
 /media/
 /static/
+
+
