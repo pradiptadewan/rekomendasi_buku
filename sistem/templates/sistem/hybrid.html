@@ -1,0 +1,344 @@
+{% extends 'sistem/base.html' %}
+{% load static %}
+{% block title %}Hybrid Recommendation{% endblock %}
+
+{% block navigation %}
+    {# ... Kode navigasi Anda ... #}
+{% endblock navigation %}
+
+{% block content %}
+<main class="page-container">
+    <div class="form-container">
+        <div class="form-header">
+            <h2 class="form-title">Rekomendasi Hybrid</h2>
+            <p class="form-subtitle">Dapatkan rekomendasi terbaik yang menggabungkan kemiripan antar pengguna dengan preferensi genre pribadi Anda.</p>
+        </div>
+
+        <form method="POST" action="{% url 'sistem:hybrid' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username-select" class="form-label">Pilih Pengguna:</label>
+                <select name="username" id="username-select" class="form-input">
+                    <option value="">-- Pilih seorang pengguna --</option>
+                    {% for user in all_users %}
+                        <option value="{{ user }}" {% if user == selected_user %}selected{% endif %}>{{ user }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="form-button">
+                <i class="fas fa-magic-wand-sparkles"></i> Tampilkan Rekomendasi Hybrid
+            </button>
+        </form>
+    </div>
+
+    {% if selected_user %}
+    <div class="results-container">
+        <div class="results-header">
+            <h2 class="results-title">Rekomendasi Hybrid untuk <span class="highlight">{{ selected_user }}</span></h2>
+        </div>
+        <div class="card-grid">
+            {% for book in recommendations %}
+                <div class="book-card">
+                    <figure class="book-card-figure">
+                        <img class="book-card-image" src="{{ book.image_url|default:'https://placehold.co/400x300/ffd32e/FFFFFF?text=Buku' }}" alt="Sampul buku {{ book.title }}">
+                    </figure>
+                    <div class="book-card-body">
+                        <h3 class="book-card-title">{{ book.title }}</h3>
+                        <p class="book-card-author">oleh {{ book.author }}</p>
+                        <div class="book-card-footer">
+                            <a href="{% url 'sistem:book_detail' book.id %}" class="card-button detail">Detail</a>
+                            <a href="{% if user.is_authenticated %}{% url 'sistem:add_to_favorite' book.id %}{% else %}{% url 'sistem:login' %}?next={% url 'sistem:add_to_favorite' book.id %}{% endif %}" class="card-button favorite">Favorite</a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="no-results-wrapper">
+                    <i class="fas fa-puzzle-piece no-results-icon"></i>
+                    <h3 class="no-results-title">Rekomendasi Hybrid Gagal Dibuat</h3>
+                    <p class="no-results-text">Kami tidak dapat membuat rekomendasi untuk pengguna ini, kemungkinan karena riwayat baca yang terlalu sedikit.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</main>
+
+<style>
+    /* === IMPORT FONT MODERN === */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap');
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css');
+
+    /* === PALET WARNA & VARIABEL DESAIN === */
+    :root {
+        --font-sans: 'Inter', sans-serif;
+        --font-serif: 'Lora', serif;
+        --color-primary: #FFCC00; /* Biru Modern */
+        --color-primary-hover: #ffd32e;
+        --color-secondary: #F59E0B; /* Aksen Kuning/Emas */
+        --color-text-base: #1F2937; /* Abu-abu Gelap (untuk teks) */
+        --color-text-muted: #6B7280; /* Abu-abu Terang */
+        --color-bg: #F9FAFB; /* Latar Belakang Halaman */
+        --color-surface: #FFFFFF; /* Warna Kartu/Formulir */
+        --color-border: #E5E7EB;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --radius-md: 0.5rem; /* 8px */
+        --radius-lg: 0.75rem; /* 12px */
+    }
+
+    /* === RESET & BODY STYLE === */
+    body {
+        background-color: var(--color-bg);
+        font-family: var(--font-sans);
+        color: var(--color-text-base);
+        line-height: 1.6;
+    }
+
+    /* === LAYOUT UTAMA === */
+    .page-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem;
+    }
+
+    /* === CONTAINER FORMULIR INPUT === */
+    .form-container {
+        background-color: var(--color-surface);
+        border-radius: var(--radius-lg);
+        padding: 2.5rem;
+        margin-bottom: 3rem;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--color-border);
+    }
+    .form-header {
+        text-align: center;
+        margin-bottom: 2.5rem;
+    }
+    .form-title {
+        font-family: var(--font-serif);
+        font-size: 2.25rem;
+        font-weight: 600;
+        color: var(--color-text-base);
+        margin: 0;
+    }
+    .form-subtitle {
+        font-size: 1.1rem;
+        color: var(--color-text-muted);
+        margin-top: 0.5rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* === ELEMEN FORMULIR === */
+    .form-section { margin-bottom: 2rem; }
+    .form-section-title {
+        font-family: var(--font-serif);
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        font-weight: 500;
+    }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+    .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: 1rem;
+        background-color: #F9FAFB;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-input:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+    .form-button {
+        width: 100%;
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        border: none;
+        background-color: var(--color-primary);
+        color: black;
+        transition: background-color 0.2s, transform 0.1s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    .form-button:hover {
+        background-color: var(--color-primary-hover);
+    }
+    .form-button:active {
+        transform: scale(0.98);
+    }
+    .form-divider {
+        border: 0;
+        height: 1px;
+        background-color: var(--color-border);
+        margin: 2.5rem 0;
+    }
+
+    /* === AREA HASIL REKOMENDASI === */
+    .results-container {
+        padding-top: 2rem;
+    }
+    .results-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    .results-title {
+        font-family: var(--font-serif);
+        font-size: 2.5rem;
+        font-weight: 600;
+    }
+    .results-title .highlight {
+        color: var(--color-primary);
+        font-style: normal;
+    }
+
+    /* === KARTU BUKU (BOOK CARD) === */
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 2rem;
+    }
+    .book-card {
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--color-border);
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .book-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-md);
+    }
+    .book-card-figure {
+        margin: 0;
+        aspect-ratio: 4 / 3;
+        overflow: hidden;
+    }
+    .book-card-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.4s ease;
+    }
+    .book-card:hover .book-card-image {
+        transform: scale(1.05);
+    }
+    .book-card-body {
+        padding: 1.25rem;
+        text-align: left;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    .book-card-title {
+        font-family: var(--font-serif);
+        font-size: 1.2rem;
+        font-weight: 600;
+        line-height: 1.4;
+        margin: 0 0 0.25rem 0;
+        /* Batasi 2 baris teks */
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .book-card-author {
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+        margin: 0;
+        margin-bottom: 1rem;
+    }
+    .book-card-footer {
+        margin-top: auto; /* Dorong footer ke bawah */
+        display: flex;
+        gap: 0.75rem;
+    }
+    .card-button {
+        flex-grow: 1;
+        text-align: center;
+        padding: 0.6rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        transition: background-color 0.2s, color 0.2s;
+    }
+    .card-button.detail {
+        background-color: var(--color-primary);
+        color: white;
+    }
+    .card-button.detail:hover { background-color: var(--color-primary-hover); }
+    .card-button.favorite {
+        background-color: transparent;
+        color: var(--color-primary);
+        border: 1px solid var(--color-primary);
+    }
+    .card-button.favorite:hover {
+        background-color: var(--color-primary);
+        color: white;
+    }
+
+    /* === PESAN SAAT HASIL TIDAK DITEMUKAN === */
+    .no-results-wrapper {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+    .no-results-icon {
+        font-size: 4rem;
+        color: var(--color-primary);
+        margin-bottom: 1.5rem;
+        opacity: 0.5;
+    }
+    .no-results-title {
+        font-family: var(--font-serif);
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: var(--color-text-base);
+    }
+    .no-results-text {
+        color: var(--color-text-muted);
+        max-width: 450px;
+        margin: 0.5rem auto 0 auto;
+    }
+
+    /* === KHUSUS COLLABORATIVE: DAFTAR RIWAYAT === */
+    .history-section {
+        background-color: var(--color-surface);
+        padding: 2rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        margin-bottom: 3rem;
+    }
+    .history-list {
+        list-style-type: none;
+        padding-left: 0;
+        columns: 2;
+        column-gap: 2rem;
+    }
+    .history-list li {
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .history-list li::before {
+        content: '📖';
+        font-size: 1rem;
+    }
+</style>
+{% endblock %}

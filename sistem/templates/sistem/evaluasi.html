@@ -1,0 +1,237 @@
+{% extends 'sistem/base.html' %}
+{% load static %}
+{% block title %}System Evaluation{% endblock %}
+
+{% block navigation %}
+    <header class="header">
+        <h1 class="header-title">REKOMENDASI BUKU</h1>
+        <nav class="nav-links">
+            <a href="{% url 'sistem:home' %}" class="nav-link">HOME</a>
+            <a href="{% url 'sistem:dashboard_user' %}" class="nav-link active">DASHBOARD</a>
+            <a href="{% url 'sistem:input' %}" class="nav-link">RECOMMENDATION</a>
+            <div class="profile-section">
+                <a href="{% url 'sistem:favorite_list' %}" class="notification-icon" aria-label="Favorites">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </a>
+                <a href="{% url 'sistem:dashboard_user' %}" class="profile-avatar-link" aria-label="Lihat Dashboard">
+                    <div class="profile-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    </div>
+                </a>
+            </div>
+        </nav>
+    </header>
+    <hr class="header-divider">
+{% endblock navigation %}
+
+{% block content %}
+<main class="dashboard-layout">
+    <div class="form-header">
+        <h2 class="form-title">System Evaluation Dashboard</h2>
+        <p class="form-subtitle">Analisis dan pahami bagaimana metode rekomendasi kami bekerja langkah demi langkah.</p>
+    </div>
+
+    <div class="tab-nav">
+        <button class="tab-link active" onclick="openTab(event, 'Collaborative')">1. Collaborative Filtering</button>
+        <button class="tab-link" onclick="openTab(event, 'ContentBased')">2. Content-Based Analysis</button>
+        <button class="tab-link" onclick="openTab(event, 'Hybrid')">3. Hybrid Method</button>
+    </div>
+
+    <div id="Collaborative" class="tab-content" style="display:block;">
+        <div class="step-section">
+            <div class="step-header">
+                <span class="step-badge">Step 1</span>
+                <h3 class="step-title">Pilih Pengguna untuk Dianalisis</h3>
+            </div>
+            <p class="step-description">Pilih pengguna untuk melihat siapa "tetangga" (pengguna serupa) mereka dan mengapa.</p>
+            <form method="POST" action="{% url 'sistem:evaluation_view' %}" class="analysis-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <select name="username" class="form-select">
+                        <option value="">-- Pilih Pengguna --</option>
+                        {% for user in all_users %}<option value="{{ user }}" {% if user == selected_user %}selected{% endif %}>{{ user }}</option>{% endfor %}
+                    </select>
+                    <button type="submit" name="evaluate_collaborative" class="form-button">Analisis Pengguna</button>
+                </div>
+            </form>
+        </div>
+        {% if eval_type == 'collaborative' %}
+        <hr class="section-divider">
+        <div class="step-section">
+            <div class="step-header"><span class="step-badge">Step 2</span><h3 class="step-title">Menemukan Pengguna Serupa untuk <span class="highlight-text">"{{ selected_user }}"</span></h3></div>
+            <p class="step-description">Kami menghitung skor kemiripan antara <em>{{ selected_user }}</em> dan semua pengguna lain. Skor yang lebih tinggi berarti selera mereka lebih mirip. Berikut adalah 5 tetangga teratas:</p>
+            <table class="eval-table">
+                <thead><tr><th>Nama Tetangga</th><th>Skor Kemiripan</th><th>Alasan (Buku yang Sama-sama Dibaca)</th></tr></thead>
+                <tbody>
+                    {% for item in eval_data %}{% if item.common_books %}<tr><td><strong>{{ item.username }}</strong></td><td><span class="score-badge">{{ item.similarity_score|floatformat:4 }}</span></td><td>Karena Anda berdua membaca: <em>{{ item.common_books|join:", " }}</em></td></tr>{% endif %}{% empty %}<tr><td colspan="3">Tidak ditemukan pengguna yang cukup mirip.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <hr class="section-divider">
+        <div class="step-section">
+            <div class="step-header"><span class="step-badge">Step 3</span><h3 class="step-title">Membuat Rekomendasi</h3></div>
+            <p class="step-description">Selanjutnya, kami mencari buku yang telah dibaca oleh para tetangga ini, tetapi **belum** dibaca oleh <em>{{ selected_user }}</em>. Buku-buku inilah yang menjadi rekomendasi.</p>
+            <ul class="recommendation-list">
+                {% for item in eval_data %}{% for rec_book in item.new_recommendations %}<li>Dari <strong>{{ item.username }}</strong>, kami merekomendasikan: <strong>{{ rec_book }}</strong></li>{% endfor %}{% endfor %}
+                {% if not eval_data %}<li>Tidak ada rekomendasi baru yang bisa dibuat dari pengguna serupa.</li>{% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <div id="ContentBased" class="tab-content">
+        <div class="step-section">
+            <div class="step-header"><span class="step-badge">Step 1</span><h3 class="step-title">Pilih Buku untuk Dianalisis</h3></div>
+            <p class="step-description">Kami akan menguraikan atribut buku ini dan menemukan buku lain dengan profil serupa.</p>
+            <form method="POST" action="{% url 'sistem:evaluation_view' %}" class="analysis-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <select name="book_title" class="form-select">
+                        <option value="">-- Pilih Buku dari Daftar --</option>
+                        {% for book in all_books %}<option value="{{ book }}" {% if book == source_book.title %}selected{% endif %}>{{ book }}</option>{% endfor %}
+                    </select>
+                    <button type="submit" name="evaluate_content" class="form-button">Analisis Buku</button>
+                </div>
+            </form>
+        </div>
+        {% if eval_type == 'content_based' %}
+        <hr class="section-divider">
+        <div class="step-section">
+            <div class="step-header"><span class="step-badge">Step 2</span><h3 class="step-title">Menganalisis Profil <span class="highlight-text">"{{ source_book.title }}"</span></h3></div>
+            <p class="step-description">Ini adalah atribut kunci yang kami identifikasi untuk buku yang dipilih.</p>
+            <div class="source-profile"><dl><dt>Penulis</dt><dd>{{ source_book.author }}</dd><dt>Genre</dt><dd>{{ source_book.genre }}</dd><dt>Rating</dt><dd>{{ source_book.rating|floatformat:1 }} / 5.0</dd></dl></div>
+        </div>
+        <hr class="section-divider">
+        <div class="step-section">
+            <div class="step-header"><span class="step-badge">Step 3</span><h3 class="step-title">Buku Serupa Ditemukan</h3></div>
+            <p class="step-description">Kecocokan teratas berdasarkan kemiripan profil, dengan rincian atribut yang sama.</p>
+            <div class="results-grid">
+                {% for item in eval_data %}<div class="result-card"><div class="card-header"><span class="card-rank">#{{ forloop.counter }}</span><h4 class="card-title">{{ item.book_object.title }}</h4><span class="card-score" title="Skor Kemiripan">{{ item.similarity_score|floatformat:4 }}</span></div><div class="card-body"><strong class="reasoning-title">Alasan Kecocokan:</strong><ul class="reasoning-list">{% for match in item.matches %}<li><svg class="check-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 15.172l9.192-9.193 1.415 1.414L10 18l-6.364-6.364 1.414-1.414z"/></svg> Cocok pada <strong>{{ match.attribute }}</strong>: <span>{{ match.value }}</span></li>{% empty %}<li>Direkomendasikan berdasarkan kemiripan tekstual gabungan.</li>{% endfor %}</ul></div></div>{% empty %}<p>Tidak ada buku serupa yang ditemukan.</p>{% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div id="Hybrid" class="tab-content">
+        <div class="step-section">
+            <div class="step-header"><span class="step-badge">Step 1</span><h3 class="step-title">Pilih Pengguna untuk Analisis Hybrid</h3></div>
+            <p class="step-description">Lihat bagaimana sistem menggabungkan perilaku pengguna lain dengan selera pribadi Anda.</p>
+            <form method="POST" action="{% url 'sistem:evaluation_view' %}" class="analysis-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <select name="username_hybrid" class="form-select">
+                        <option value="">-- Pilih Pengguna --</option>
+                        {% for user in all_users %}<option value="{{ user }}" {% if user == selected_user and eval_type == 'hybrid' %}selected{% endif %}>{{ user }}</option>{% endfor %}
+                    </select>
+                    <button type="submit" name="evaluate_hybrid" class="form-button">Analisis Hybrid</button>
+                </div>
+            </form>
+        </div>
+        {% if eval_type == 'hybrid' and eval_data %}
+        <hr class="section-divider">
+        <div class="step-section">
+            <div class="step-header"><span class="step-badge">Tahap 1</span><h3 class="step-title">Pencarian Kandidat (Collaborative)</h3></div>
+            <p class="step-description">Sistem menemukan <strong>{{ eval_data.stage1_candidates.count }} buku kandidat</strong> berdasarkan pengguna lain yang seleranya mirip dengan <span class="highlight-text">"{{ selected_user }}"</span>. Berikut beberapa contoh kandidatnya:</p>
+            <ul class="recommendation-list">
+                {% for book_title in eval_data.stage1_candidates.books|slice:":5" %}<li>{{ book_title }}</li>{% endfor %}
+            </ul>
+        </div>
+        <hr class="section-divider">
+        <div class="step-section">
+            <div class="step-header"><span class="step-badge">Tahap 2</span><h3 class="step-title">Pembuatan Profil Konten Pengguna</h3></div>
+            <p class="step-description">Selanjutnya, sistem menganalisis riwayat baca <span class="highlight-text">"{{ selected_user }}"</span> untuk menemukan genre favoritnya.</p>
+            <div class="source-profile"><dl><dt>Top Genre Favorit</dt><dd>{% for genre in eval_data.stage2_profile.top_genres %} <span class="genre-tag">{{ genre }}</span> {% endfor %}</dd></dl></div>
+        </div>
+        <hr class="section-divider">
+        <div class="step-section">
+            <div class="step-header"><span class="step-badge">Tahap 3</span><h3 class="step-title">Pengurutan Ulang & Hasil Akhir (Content-Based Re-ranking)</h3></div>
+            <p class="step-description">Daftar kandidat dari Tahap 1 diurutkan ulang. Buku yang paling cocok dengan profil genre dari Tahap 2 akan naik ke peringkat atas. Ini adalah <strong>hasil akhir</strong> rekomendasi hybrid:</p>
+            <table class="eval-table">
+                <thead><tr><th>Peringkat</th><th>Judul Buku</th><th>Skor Akhir</th><th>Alasan Peringkat</th></tr></thead>
+                <tbody>
+                    {% for book_data in eval_data.stage3_reranked_books %}<tr><td><span class="card-rank">#{{ forloop.counter }}</span></td><td><strong>{{ book_data.judul }}</strong></td><td><span class="score-badge">{{ book_data.final_score|floatformat:2 }}</span></td><td>{{ book_data.reasoning }}</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</main>
+
+<style>
+    /* General Layout & Font */
+    .dashboard-layout { max-width: 1100px; margin: 2rem auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f4f7f9; }
+    .form-header { text-align: center; margin-bottom: 2.5rem; }
+    .form-title { font-size: 2.5rem; color: #2c3e50; font-weight: 700; }
+    .form-subtitle { font-size: 1.2rem; color: #7f8c8d; margin-top: 0.5rem; }
+    /* Tab Navigation */
+    .tab-nav { border-bottom: 2px solid #dfe4ea; margin-bottom: 2rem; display: flex; }
+    .tab-link { background: none; border: none; padding: 1rem 1.5rem; font-size: 1.1rem; cursor: pointer; transition: all 0.2s ease; border-bottom: 4px solid transparent; margin-bottom: -2px; color: #576574; }
+    .tab-link:hover { background-color: #f1f2f6; }
+    .tab-link.active { border-bottom-color: #3498db; color: #3498db; font-weight: 600; }
+    .tab-content { display: none; animation: fadeIn 0.5s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    /* Step Sections */
+    .step-section { padding: 2.5rem; background-color: #ffffff; border: 1px solid #ecf0f1; border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .step-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    .step-badge { background-color: #3498db; color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: bold; font-size: 0.9rem; }
+    .step-title { margin: 0; font-size: 1.8rem; color: #34495e; }
+    .step-description { color: #555; font-size: 1.05rem; line-height: 1.6; }
+    .highlight-text { color: #3498db; font-weight: 600; }
+    .section-divider { border: 0; height: 1px; background-color: #ecf0f1; margin: 1rem 0 2rem 0; }
+    /* Forms */
+    .analysis-form .form-group { display: flex; gap: 1rem; align-items: center; }
+    .form-select { flex-grow: 1; padding: 0.8rem; border: 1px solid #bdc3c7; border-radius: 5px; font-size: 1rem; background-color: #fff; }
+    .form-button { background-color: #3498db; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background-color 0.2s; }
+    .form-button:hover { background-color: #2980b9; }
+    /* Tables & Lists */
+    .eval-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; font-size: 0.95rem; }
+    .eval-table th, .eval-table td { padding: 1rem; border: 1px solid #ecf0f1; text-align: left; vertical-align: middle; }
+    .eval-table th { background-color: #f8f9fa; font-weight: 600; }
+    .score-badge { background-color: #eafaf1; color: #27ae60; padding: 0.4rem 0.7rem; border-radius: 5px; font-weight: bold; font-family: monospace; }
+    .recommendation-list { list-style: none; padding-left: 0; }
+    .recommendation-list li { background-color: #f8f9fa; padding: 0.8rem 1.2rem; border-left: 4px solid #3498db; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0; }
+    /* Content-Based & Hybrid Specific Styles */
+    .source-profile dl { display: grid; grid-template-columns: 150px 1fr; gap: 0.8rem; background-color: #f8f9fa; padding: 1rem; border-radius: 5px; }
+    .source-profile dt { font-weight: 600; color: #555; }
+    .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
+    .result-card { background-color: #fff; border: 1px solid #ecf0f1; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
+    .result-card .card-header { display: flex; align-items: center; gap: 1rem; padding: 1rem; border-bottom: 1px solid #ecf0f1; background-color: #fdfdfe; }
+    .card-rank { background-color: #95a5a6; color: white; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-weight: bold; flex-shrink: 0; }
+    .result-card .card-title { margin: 0; font-size: 1.1rem; flex-grow: 1; }
+    .result-card .card-score { font-size: 0.9rem; font-weight: bold; color: #27ae60; cursor: help; }
+    .result-card .card-body { padding: 1rem; }
+    .reasoning-title { display: block; margin-bottom: 0.75rem; color: #555; font-weight: 600; }
+    .reasoning-list { list-style: none; padding: 0; margin: 0; }
+    .reasoning-list li { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 0.9rem; }
+    .check-icon { width: 18px; height: 18px; fill: #27ae60; flex-shrink: 0; }
+    .genre-tag { background-color: #1abc9c; color: white; padding: 0.3rem 0.8rem; border-radius: 15px; font-size: 0.9rem; margin-right: 0.5rem; display: inline-block; margin-bottom: 0.3rem; }
+</style>
+
+<script>
+    // JavaScript untuk fungsionalitas Tab
+    function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tab-link");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+
+    // Trik untuk memastikan tab yang benar tetap terbuka setelah halaman di-refresh
+    document.addEventListener("DOMContentLoaded", function() {
+        {% if eval_type == 'collaborative' %}
+            openTab({currentTarget: document.querySelector('.tab-link[onclick*="Collaborative"]')}, 'Collaborative');
+        {% elif eval_type == 'content_based' %}
+            openTab({currentTarget: document.querySelector('.tab-link[onclick*="ContentBased"]')}, 'ContentBased');
+        {% elif eval_type == 'hybrid' %}
+            openTab({currentTarget: document.querySelector('.tab-link[onclick*="Hybrid"]')}, 'Hybrid');
+        {% endif %}
+    });
+</script>
+{% endblock %}

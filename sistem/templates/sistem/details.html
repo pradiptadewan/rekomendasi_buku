@@ -9,7 +9,7 @@
     <h1 class="header-title">REKOMENDASI BUKU</h1>
     <nav class="nav-links">
         <a href="{% url 'sistem:home' %}" class="nav-link">HOME</a>
-        <a href="{% if user.is_authenticated %}{% url 'sistem:dashboard_user' %}{% else %}{% url 'sistem:dashboard_public' %}{% endif %}" class="nav-link">DASHBOARD</a>
+        <a href="{% if user.is_authenticated %}{% url 'sistem:dashboard_user' %}{% else %}{% url 'sistem:dashboard' %}{% endif %}" class="nav-link">DASHBOARD</a>
         <a href="{% url 'sistem:input' %}" class="nav-link">RECOMMENDATION</a>
 
         {% if user.is_authenticated %}
