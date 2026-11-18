@@ -1,0 +1,19 @@
+{% extends 'sistem/base.html' %}
+{% block title %}Favorit Saya{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% include 'sistem/partials/page_header.html' with eyebrow='Favorit' title='Buku favorit saya' subtitle='Tekan ikon hati pada kartu untuk menghapus buku dari daftar ini.' %}
+
+    <div class="book-grid">
+        {% for book in books %}{% include 'sistem/partials/book_card.html' %}
+        {% empty %}
+            <div class="empty-state">
+                <h3>Belum ada buku favorit</h3>
+                <p>Jelajahi koleksi dan tekan ikon hati pada buku yang kamu suka.</p>
+                <a href="{% url 'sistem:book_list' %}" class="btn btn-primary">Jelajahi koleksi</a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

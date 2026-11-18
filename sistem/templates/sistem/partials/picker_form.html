@@ -1,0 +1,20 @@
+{% comment %}
+Form pilih pembaca atau judul buku (input + daftar saran).
+Parameter: name (user/title), options, selected, label, placeholder, button, tab (opsional), mode (opsional), error (opsional).
+{% endcomment %}
+<form method="get" class="picker-form">
+    {% if tab %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
+    {% if mode %}<input type="hidden" name="mode" value="{{ mode }}">{% endif %}
+    <label for="picker-{{ name }}{{ tab }}" class="label">{{ label }}</label>
+    <div class="picker-row">
+        <input type="text" id="picker-{{ name }}{{ tab }}" name="{{ name }}" class="input{% if error %} is-invalid{% endif %}"
+               list="picker-{{ name }}{{ tab }}-options" value="{{ selected|default:'' }}" placeholder="{{ placeholder }}"
+               autocomplete="off" required{% if error %} aria-invalid="true" aria-describedby="picker-{{ name }}{{ tab }}-error"{% endif %}>
+        <datalist id="picker-{{ name }}{{ tab }}-options">
+            {% for option in options %}<option value="{{ option }}">{% endfor %}
+        </datalist>
+        <button type="submit" class="btn btn-primary">{{ button }}</button>
+    </div>
+    {% if error %}<p class="field-error" id="picker-{{ name }}{{ tab }}-error">{{ error }}</p>
+    {% else %}<p class="hint">Ketik untuk melihat saran ({{ options|length }} pilihan).</p>{% endif %}
+</form>

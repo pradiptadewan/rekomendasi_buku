@@ -1,0 +1,7 @@
+{% if book.cover_url %}
+<img class="cover-img" src="{{ book.cover_url }}" alt="Sampul {{ book.title }}" loading="lazy" referrerpolicy="no-referrer" data-cover>
+{% endif %}
+<div class="cover-fallback"{% if book.cover_url %} hidden{% endif %}>
+    <span class="cover-fallback-title">{{ book.title }}</span>
+    <span class="cover-fallback-author">{{ book.author }}</span>
+</div>

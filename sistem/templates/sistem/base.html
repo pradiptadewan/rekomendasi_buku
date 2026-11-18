@@ -1,22 +1,30 @@
-{% load static %}
-
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Rekomendasi Buku{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/style2.css' %}">
-    {% block extra_head %}{% endblock %}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Rekomendasi Buku{% endblock %} · Rekomendasi Buku</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
 </head>
 <body>
-    <div class="container">
-        {% block navigation %}{% endblock navigation %}
+    <a class="skip-link" href="#main">Lewati ke konten</a>
+    {% include 'sistem/partials/navbar.html' %}
+    {% include 'sistem/partials/messages.html' %}
 
+    <main id="main" class="{% block main_class %}page{% endblock %}">
         {% block content %}{% endblock %}
-    </div>
+    </main>
 
-    <script src="{% static 'js/main2.js' %}"></script>
-    {% block extra_js %}{% endblock %}
+    <footer class="footer">
+        <div class="container footer-inner">
+            <span>© {% now "Y" %} Rekomendasi Buku</span>
+            <span class="muted">Content-Based · Collaborative · Hybrid Filtering</span>
+        </div>
+    </footer>
+
+    <script src="{% static 'js/main.js' %}" defer></script>
 </body>
 </html>

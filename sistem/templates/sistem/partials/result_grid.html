@@ -1,0 +1,10 @@
+{% comment %}
+Grid hasil rekomendasi. Parameter: items (list dict berisi book, reason, dan opsional tags / social_proof), empty_heading, empty_text.
+{% endcomment %}
+<div class="book-grid">
+    {% for item in items %}
+        {% include 'sistem/partials/book_card.html' with book=item.book reason=item.reason rank=forloop.counter tags=item.tags note=item.social_proof %}
+    {% empty %}
+        {% include 'sistem/partials/empty_state.html' with heading=empty_heading text=empty_text %}
+    {% endfor %}
+</div>

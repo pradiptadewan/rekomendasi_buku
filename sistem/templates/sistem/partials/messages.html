@@ -1,0 +1,12 @@
+{% if messages %}
+<div class="toast-stack" role="status" aria-live="polite">
+    {% for message in messages %}
+    <div class="toast toast-{{ message.tags|default:'info' }}" data-toast>
+        <span>{{ message }}</span>
+        <button type="button" class="toast-close" aria-label="Tutup" data-toast-close>
+            {% include 'sistem/partials/icon.html' with name='close' %}
+        </button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}

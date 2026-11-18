@@ -1,0 +1,23 @@
+{% extends 'sistem/base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="auth">
+        <div class="auth-art">
+            <img src="{% block auth_image %}{% endblock %}" alt="" width="520" height="620">
+        </div>
+        <div class="auth-card">
+            <h1 class="auth-title">{% block auth_title %}{% endblock %}</h1>
+            <p class="muted">{% block auth_subtitle %}{% endblock %}</p>
+
+            <form method="post" class="auth-form" novalidate>
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                <div class="alert alert-error" role="alert">{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+                {% endif %}
+                {% block auth_fields %}{% endblock %}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

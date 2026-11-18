@@ -1,0 +1,26 @@
+{% comment %}
+Tombol favorit. Parameter: book, large (opsional, untuk halaman detail).
+{% endcomment %}
+{% if user.is_authenticated %}
+    {% if book.id in favorite_ids %}
+    <form method="post" action="{% url 'sistem:favorite_remove' book.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="{% if large %}btn btn-secondary{% else %}fav-btn is-active{% endif %}" title="Hapus dari favorit" aria-label="Hapus {{ book.title }} dari favorit">
+            {% include 'sistem/partials/icon.html' with name='heart' %}{% if large %} Hapus dari Favorit{% endif %}
+        </button>
+    </form>
+    {% else %}
+    <form method="post" action="{% url 'sistem:favorite_add' book.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="{% if large %}btn btn-primary{% else %}fav-btn{% endif %}" title="Tambah ke favorit" aria-label="Tambah {{ book.title }} ke favorit">
+            {% include 'sistem/partials/icon.html' with name='heart-outline' %}{% if large %} Tambah ke Favorit{% endif %}
+        </button>
+    </form>
+    {% endif %}
+{% else %}
+    <a href="{% url 'sistem:login' %}?next={{ request.get_full_path|urlencode }}" class="{% if large %}btn btn-primary{% else %}fav-btn{% endif %}" title="Masuk untuk menyimpan favorit" aria-label="Masuk untuk memfavoritkan {{ book.title }}">
+        {% include 'sistem/partials/icon.html' with name='heart-outline' %}{% if large %} Masuk untuk Favorit{% endif %}
+    </a>
+{% endif %}

@@ -1,0 +1,8 @@
+<form method="get" action="{% url 'sistem:book_list' %}" class="search" role="search">
+    <label for="search-q" class="sr-only">Cari judul atau penulis</label>
+    {% include 'sistem/partials/icon.html' with name='search' class='search-icon' %}
+    <input type="search" id="search-q" name="q" class="input search-input" placeholder="Cari judul atau penulis…" value="{{ query|default:'' }}">
+    {% if genre %}<input type="hidden" name="genre" value="{{ genre }}">{% endif %}
+    {% if sort and sort != 'populer' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+    <button type="submit" class="btn btn-primary">Cari</button>
+</form>

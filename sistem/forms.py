@@ -1,19 +1,36 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 
-class CustomUserCreationForm(UserCreationForm):
-    # Tambahkan field email
-    email = forms.EmailField(required=True, help_text='Wajib diisi. Kami tidak akan membagikan email Anda.')
 
-    class Meta(UserCreationForm.Meta):
-        # Gunakan model User bawaan Django
-        model = User
-        # Tentukan field yang akan ditampilkan di form, tambahkan 'email'
-        fields = ("username", "email")
+class StyledFormMixin:
+    """Tambahkan class CSS ke semua field supaya tampilannya seragam."""
 
     def __init__(self, *args, **kwargs):
-        super(CustomUserCreationForm, self).__init__(*args, **kwargs)
-        # Tambahkan kelas CSS 'form-input' ke semua field agar sesuai dengan style Anda
-        for field_name, field in self.fields.items():
-            field.widget.attrs['class'] = 'form-input'
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault('class', 'input')
+
+
+class LoginForm(StyledFormMixin, AuthenticationForm):
+    remember_me = forms.BooleanField(label='Ingat saya', required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['remember_me'].widget.attrs['class'] = 'checkbox'
+        self.fields['username'].widget.attrs['placeholder'] = 'Username'
+        self.fields['password'].widget.attrs['placeholder'] = 'Password'
+
+
+class RegisterForm(StyledFormMixin, UserCreationForm):
+    email = forms.EmailField(label='Email', help_text='Email tidak akan ditampilkan ke pengguna lain.')
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ('username', 'email')
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('Email ini sudah terdaftar.')
+        return email

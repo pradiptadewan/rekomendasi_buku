@@ -1,0 +1,72 @@
+{% extends 'sistem/base.html' %}
+{% block title %}Koleksi Buku{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Koleksi</p>
+            <h1 class="page-title">
+                {% if query %}Hasil pencarian “{{ query }}”{% elif genre %}Genre: {{ genre|title }}{% else %}Semua buku{% endif %}
+            </h1>
+            <p class="muted">{{ page_obj.paginator.count }} buku ditemukan</p>
+        </div>
+    </header>
+
+    <div class="toolbar">
+        {% include 'sistem/partials/search_form.html' %}
+        <form method="get" class="toolbar-filters" data-autosubmit>
+            {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+            <label class="field-inline">
+                <span>Genre</span>
+                <select name="genre" class="input">
+                    <option value="">Semua genre</option>
+                    {% for g in genres %}<option value="{{ g }}"{% if g == genre %} selected{% endif %}>{{ g|title }}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="field-inline">
+                <span>Urutkan</span>
+                <select name="sort" class="input">
+                    {% for key, label in sort_options.items %}<option value="{{ key }}"{% if key == sort %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </label>
+            <noscript><button type="submit" class="btn btn-secondary">Terapkan</button></noscript>
+        </form>
+    </div>
+
+    {% if query or genre %}
+    <p class="filter-summary">
+        {% if query %}<span class="chip">Kata kunci: {{ query }}</span>{% endif %}
+        {% if genre %}<span class="chip">Genre: {{ genre|title }}</span>{% endif %}
+        <a href="{% url 'sistem:book_list' %}" class="link-muted">Hapus filter</a>
+    </p>
+    {% endif %}
+
+    <div class="book-grid">
+        {% for book in page_obj %}{% include 'sistem/partials/book_card.html' %}
+        {% empty %}
+            <div class="empty-state">
+                <h3>Buku tidak ditemukan</h3>
+                <p>Coba kata kunci lain atau hapus filter genre.</p>
+                <a href="{% url 'sistem:book_list' %}" class="btn btn-secondary">Lihat semua buku</a>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="pagination" aria-label="Navigasi halaman">
+        {% if page_obj.has_previous %}
+            <a href="{% querystring page=page_obj.previous_page_number %}" class="btn btn-secondary btn-sm">{% include 'sistem/partials/icon.html' with name='arrow-left' %} Sebelumnya</a>
+        {% else %}
+            <span class="btn btn-secondary btn-sm is-disabled" aria-disabled="true">{% include 'sistem/partials/icon.html' with name='arrow-left' %} Sebelumnya</span>
+        {% endif %}
+        <span class="pagination-info">Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="{% querystring page=page_obj.next_page_number %}" class="btn btn-secondary btn-sm">Berikutnya {% include 'sistem/partials/icon.html' with name='arrow-right' %}</a>
+        {% else %}
+            <span class="btn btn-secondary btn-sm is-disabled" aria-disabled="true">Berikutnya {% include 'sistem/partials/icon.html' with name='arrow-right' %}</span>
+        {% endif %}
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

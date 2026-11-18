@@ -1,0 +1,29 @@
+{% comment %}Kartu metode rekomendasi. Parameter: with_evaluation (opsional).{% endcomment %}
+<div class="method-grid{% if with_evaluation %} method-grid-4{% endif %}">
+    <a href="{% url 'sistem:content_based' %}" class="method-card">
+        <span class="method-icon method-content">{% include 'sistem/partials/icon.html' with name='book' %}</span>
+        <h3>Content-Based Filtering</h3>
+        <p>Cari buku yang mirip dengan judul pilihanmu, atau saring berdasarkan genre, rating minimal, dan jumlah halaman.</p>
+        <span class="link-arrow">Mulai {% include 'sistem/partials/icon.html' with name='arrow-right' %}</span>
+    </a>
+    <a href="{% url 'sistem:collaborative' %}" class="method-card">
+        <span class="method-icon method-collab">{% include 'sistem/partials/icon.html' with name='users' %}</span>
+        <h3>Collaborative Filtering</h3>
+        <p>Pilih pembaca dari dataset; sistem mencari pembaca lain dengan riwayat pinjam mirip, lalu merekomendasikan buku mereka.</p>
+        <span class="link-arrow">Mulai {% include 'sistem/partials/icon.html' with name='arrow-right' %}</span>
+    </a>
+    <a href="{% url 'sistem:hybrid' %}" class="method-card">
+        <span class="method-icon method-hybrid">{% include 'sistem/partials/icon.html' with name='layers' %}</span>
+        <h3>Hybrid</h3>
+        <p>Kandidat dari Collaborative Filtering diurutkan ulang berdasarkan kecocokan dengan genre favorit pembaca.</p>
+        <span class="link-arrow">Mulai {% include 'sistem/partials/icon.html' with name='arrow-right' %}</span>
+    </a>
+    {% if with_evaluation %}
+    <a href="{% url 'sistem:evaluation' %}" class="method-card">
+        <span class="method-icon method-eval">{% include 'sistem/partials/icon.html' with name='chart' %}</span>
+        <h3>Evaluasi Sistem</h3>
+        <p>Lihat langkah demi langkah bagaimana setiap metode menghasilkan rekomendasinya, lengkap dengan skor.</p>
+        <span class="link-arrow">Lihat {% include 'sistem/partials/icon.html' with name='arrow-right' %}</span>
+    </a>
+    {% endif %}
+</div>

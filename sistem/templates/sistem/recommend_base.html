@@ -1,0 +1,11 @@
+{% extends 'sistem/base.html' %}
+{% comment %}Layout halaman metode rekomendasi. Child mengisi block: header, form, results.{% endcomment %}
+
+{% block content %}
+<div class="container">
+    {% url 'sistem:recommend' as hub_url %}
+    {% block header %}{% endblock %}
+    <section class="panel">{% block form %}{% endblock %}</section>
+    {% block results %}{% endblock %}
+</div>
+{% endblock %}

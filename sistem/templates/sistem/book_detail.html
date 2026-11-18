@@ -1,0 +1,50 @@
+{% extends 'sistem/base.html' %}
+{% block title %}{{ book.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="{% url 'sistem:book_list' %}" class="link-back" data-history-back>{% include 'sistem/partials/icon.html' with name='arrow-left' %} Kembali</a>
+
+    <article class="detail">
+        <div class="detail-cover">{% include 'sistem/partials/book_cover.html' %}</div>
+
+        <div class="detail-info">
+            {% if book.genre_list %}
+            <div class="chip-row">
+                {% for g in book.genre_list %}<a href="{% url 'sistem:book_list' %}?genre={{ g|urlencode }}" class="chip chip-link">{{ g|title }}</a>{% endfor %}
+            </div>
+            {% endif %}
+            <h1 class="detail-title">{{ book.title }}</h1>
+            <p class="detail-author">oleh <a href="{% url 'sistem:book_list' %}?q={{ book.author|urlencode }}">{{ book.author }}</a></p>
+
+            <dl class="meta">
+                <div><dt>Rating</dt><dd>{% if book.rating %}{% include 'sistem/partials/icon.html' with name='star' class='icon-star' %} {{ book.rating|floatformat:2 }} <span class="muted">/ 5</span>{% else %}–{% endif %}</dd></div>
+                <div><dt>Halaman</dt><dd>{{ book.page_count|default:'–' }}</dd></div>
+                <div><dt>Disukai</dt><dd>{{ book.favorites.count }} pengguna</dd></div>
+            </dl>
+
+            <div class="detail-actions">
+                {% include 'sistem/partials/favorite_button.html' with large=True %}
+                <a href="{% url 'sistem:content_based' %}?mode=title&amp;title={{ book.title|urlencode }}" class="btn btn-secondary">Cari buku serupa</a>
+            </div>
+
+            <section class="synopsis">
+                <h2>Sinopsis</h2>
+                {% if book.synopsis %}{{ book.synopsis|linebreaks }}{% else %}<p class="muted">Sinopsis belum tersedia untuk buku ini.</p>{% endif %}
+            </section>
+        </div>
+    </article>
+
+    {% if similar_items %}
+    <section class="section-compact">
+        <div class="section-head">
+            <h2 class="section-title">Buku serupa</h2>
+            <a href="{% url 'sistem:content_based' %}?mode=title&amp;title={{ book.title|urlencode }}" class="link-arrow">Lihat analisis {% include 'sistem/partials/icon.html' with name='arrow-right' %}</a>
+        </div>
+        <div class="book-grid">
+            {% for item in similar_items %}{% include 'sistem/partials/book_card.html' with book=item.book reason=item.reason %}{% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

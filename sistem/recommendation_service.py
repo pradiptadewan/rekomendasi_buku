@@ -1,416 +1,384 @@
+"""
+Logika sistem rekomendasi: Content-Based, Collaborative, dan Hybrid.
+
+Data (CSV + model .pkl) dimuat sekali saat pertama kali dibutuhkan, lalu disimpan di memori.
+"""
+import logging
 import pickle
-import os
+from collections import Counter
+from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
+
+import numpy as np
 import pandas as pd
-from django.conf import settings
+from sklearn.metrics.pairwise import cosine_similarity
+
+from .genres import parse_genres
 from .models import Book, Favorite
-from django.db.models import Count
 
-# --- 1. Memuat semua data dan model yang dibutuhkan ---
-try:
-    # Model untuk Content-Based
-    BOOKS_LIST_PATH = os.path.join(settings.BASE_DIR, 'sistem', 'ml_model', 'books_list.pkl')
-    SIMILARITY_PATH = os.path.join(settings.BASE_DIR, 'sistem', 'ml_model', 'similarity.pkl')
-    books_df_from_pkl = pickle.load(open(BOOKS_LIST_PATH, 'rb'))
-    similarity_matrix = pickle.load(open(SIMILARITY_PATH, 'rb'))
-    # Data mentah untuk Collaborative & Filter
-    CSV_PATH = os.path.join(settings.BASE_DIR, 'sistem', 'static', 'data', 'gabungan_buku.csv')
-    full_books_df = pd.read_csv(CSV_PATH, encoding='latin-1', on_bad_lines='skip')
+logger = logging.getLogger(__name__)
 
+APP_DIR = Path(__file__).resolve().parent
+CSV_PATH = APP_DIR / 'data' / 'gabungan_buku.csv'
+BOOKS_PKL_PATH = APP_DIR / 'ml_model' / 'books_list.pkl'
+SIMILARITY_PKL_PATH = APP_DIR / 'ml_model' / 'similarity.pkl'
 
-    full_books_df['rating'] = pd.to_numeric(full_books_df['rating'], errors='coerce')
-    full_books_df['jml hlm'] = pd.to_numeric(full_books_df['jml hlm'], errors='coerce')
-    full_books_df.dropna(subset=['rating', 'jml hlm', 'judul', 'penulis', 'genre', 'username'], inplace=True)
+# Skor interaksi pembaca terhadap buku, berdasarkan status peminjaman.
+STATUS_SCORES = {'borrowing': 3, 'borrowed': 2, 'queue': 1}
+STATUS_LABELS = {3: 'Sedang dipinjam', 2: 'Sudah dipinjam', 1: 'Dalam antrean'}
+# Salah ketik status yang ada di dataset.
+STATUS_TYPOS = {'borrowes': 'borrowed', 'boorowed': 'borrowed', 'borrowd': 'borrowed', 'borrowied': 'borrowed'}
 
-    # Matriks untuk Collaborative
-    interaction_df = full_books_df[['username', 'judul', 'status']].drop_duplicates()
-    status_map = {'Borrowing': 3, 'Borrowed': 2, 'Queue': 1}
-    interaction_df['skor_interaksi'] = interaction_df['status'].map(status_map)
-    user_item_matrix = interaction_df.pivot_table(index='username', columns='judul', values='skor_interaksi',
-                                                  fill_value=0)
-
-    from sklearn.metrics.pairwise import cosine_similarity
-
-    user_similarity_df = pd.DataFrame(cosine_similarity(user_item_matrix), index=user_item_matrix.index,
-                                      columns=user_item_matrix.index)
-    print("✅ Service: Matriks kemiripan pengguna berhasil dibuat.")
-except Exception as e:
-    print(f"❌ ERROR saat memuat data di service: {e}")
-    # Set semua ke None jika ada error
-    books_df_from_pkl, similarity_matrix, full_books_df, user_item_matrix, user_similarity_df = [None] * 5
+COLLABORATIVE_NEIGHBORS = 5
+HYBRID_NEIGHBORS = 24
+HYBRID_CANDIDATES = 25
+HYBRID_TOP_GENRES = 3
+HYBRID_RATING_WEIGHT = 0.2
+SOCIAL_PROOF_MIN_LIKERS = 5
 
 
-# --- [BAGIAN 2] FUNGSI-FUNGSI PEMBANTU ---
+def load_dataset(path=CSV_PATH):
+    """Baca CSV peminjaman dan rapikan kolomnya. Satu baris = satu interaksi pembaca dengan buku."""
+    df = pd.read_csv(path, encoding='utf-8', encoding_errors='replace', on_bad_lines='skip')
+    df = df.dropna(subset=['judul', 'penulis'])
+    df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
+    df['jml hlm'] = pd.to_numeric(df['jml hlm'], errors='coerce')
+    status = df['status'].fillna('').astype(str).str.strip().str.lower().replace(STATUS_TYPOS)
+    df['skor'] = status.map(STATUS_SCORES)
+    return df
 
-def _get_social_proof(source_book_title, recommended_book_obj):
+
+@dataclass(frozen=True)
+class RecommenderData:
+    titles: list            # judul sesuai urutan baris/kolom matriks kemiripan konten
+    positions: dict         # judul -> nomor baris di matriks kemiripan konten
+    content_similarity: np.ndarray
+    books: pd.DataFrame     # satu baris per judul (index = judul)
+    user_item: pd.DataFrame     # pembaca x judul, isinya skor interaksi
+    user_similarity: pd.DataFrame
+
+
+@lru_cache(maxsize=1)
+def get_data():
     try:
-        source_book_favorites = Favorite.objects.filter(book__title=source_book_title)
-        users_who_liked_source = source_book_favorites.values_list('user_id', flat=True)
-        total_likers_source = len(users_who_liked_source)
-        if total_likers_source < 5:
-            return None
-        likers_who_also_liked_rec = Favorite.objects.filter(
-            user_id__in=users_who_liked_source, book=recommended_book_obj
-        ).count()
-        if likers_who_also_liked_rec > 0:
-            percentage = round((likers_who_also_liked_rec / total_likers_source) * 100)
-            return f"{percentage}% pembaca '{source_book_title}' juga memfavoritkan buku ini."
-    except Exception as e:
-        print(f"Error di _get_social_proof: {e}")
-    return None
+        with open(BOOKS_PKL_PATH, 'rb') as f:
+            books_pkl = pickle.load(f)
+        with open(SIMILARITY_PKL_PATH, 'rb') as f:
+            content_similarity = pickle.load(f)
 
+        # Index DataFrame di .pkl bukan 0..n-1, jadi pakai urutan posisi, bukan label index.
+        titles = books_pkl['judul'].tolist()
+        if content_similarity.shape != (len(titles), len(titles)):
+            raise ValueError('Ukuran similarity.pkl tidak sesuai dengan books_list.pkl')
 
-def _get_feature_proof(source_book_obj, recommended_book_obj):
-    try:
-        source_genres = set(g.strip() for g in source_book_obj.genre.split(','))
-        rec_genres = set(g.strip() for g in recommended_book_obj.genre.split(','))
-        matching_genres = list(source_genres.intersection(rec_genres))
-        if matching_genres:
-            return {"text": "Berbagi beberapa genre yang sama:", "tags": matching_genres}
-    except Exception as e:
-        print(f"Error di _get_feature_proof: {e}")
-    return None
+        df = load_dataset()
+        books = df.drop_duplicates('judul').set_index('judul')[['penulis', 'rating', 'jml hlm', 'genre']]
+        books['genres'] = books['genre'].map(parse_genres)
 
-
-# --- [BAGIAN 3] FUNGSI REKOMENDASI UTAMA ---
-
-# FUNGSI 1: Berdasarkan Judul
-def get_recommendations_with_strong_reasons(book_title: str, num_recommendations: int = 5):
-    if books_df_from_pkl is None or similarity_matrix is None: return []
-    try:
-        source_book_obj = Book.objects.get(title=book_title)
-    except Book.DoesNotExist:
-        return []
-    try:
-        book_index = books_df_from_pkl[books_df_from_pkl['judul'] == book_title].index[0]
-        distances = sorted(list(enumerate(similarity_matrix[book_index])), reverse=True, key=lambda x: x[1])
-        recommended_titles = [books_df_from_pkl.iloc[i[0]].judul for i in distances[1:num_recommendations + 1]]
-    except IndexError:
-        return []
-
-    recommended_books_qs = Book.objects.filter(title__in=recommended_titles)
-    final_results = []
-    for rec_book_obj in recommended_books_qs:
-        details = {
-            'social_proof': _get_social_proof(book_title, rec_book_obj),
-            'feature_proof': _get_feature_proof(source_book_obj, rec_book_obj)
-        }
-        details = {k: v for k, v in details.items() if v is not None}
-        main_reason = f"Karena Anda mencari '{source_book_obj.title}', buku ini mungkin relevan."
-        if details.get('feature_proof'):
-            main_reason = f"Memiliki kemiripan konten dengan '{source_book_obj.title}'."
-        final_results.append({'book': rec_book_obj, 'main_reason': main_reason, 'details': details})
-    return final_results
-
-
-# FUNGSI 2: Berdasarkan Filter
-def get_filtered_recommendations_with_strong_reasons(genre_preferensi=[], rating_min=0.0, halaman_maks=None,
-                                                     jumlah_rekomendasi=10):
-    if full_books_df is None: return []
-
-    data_buku = full_books_df.copy()
-    if rating_min > 0:
-        data_buku = data_buku[data_buku['rating'] >= rating_min]
-    if halaman_maks is not None:
-        data_buku = data_buku[data_buku['jml hlm'] <= halaman_maks]
-    if genre_preferensi:
-        pattern = '|'.join([g.strip() for g in genre_preferensi])
-        data_buku = data_buku[data_buku['genre'].str.contains(pattern, case=False, na=False)]
-    if data_buku.empty: return []
-
-    top_books_df = data_buku.sort_values(by='rating', ascending=False).head(jumlah_rekomendasi)
-    recommended_titles = top_books_df['judul'].tolist()
-    rekomendasi_qs = Book.objects.filter(title__in=recommended_titles)
-
-    final_results = []
-    for book in rekomendasi_qs:
-        main_reason = "Dipilih berdasarkan kriteria filter yang Anda tentukan."
-        details = {
-            "feature_proof": {
-                "text": "Sesuai dengan filter:",
-                "tags": [f"Rating > {rating_min}"] + [f"Genre: {g.capitalize()}" for g in genre_preferensi]
-            }
-        }
-        final_results.append({'book': book, 'main_reason': main_reason, 'details': details})
-    return final_results
-
-
-# Tambahkan ini di dalam file sistem/recommendation_service.py
-
-# ... (kode dan import yang sudah ada di atasnya) ...
-
-# Matriks interaksi pengguna-buku (dibuat sekali saat server jalan)
-try:
-    if full_books_df is not None:
-        # Kita hanya butuh data interaksi unik
-        interaction_df = full_books_df[['username', 'judul', 'status']].drop_duplicates()
-
-        status_map = {'Borrowing': 3, 'Borrowed': 2, 'Queue': 1}
-        interaction_df['skor_interaksi'] = interaction_df['status'].map(status_map)
-
-        # Membuat matriks pivot
-        user_item_matrix = interaction_df.pivot_table(index='username', columns='judul', values='skor_interaksi',
-                                                      fill_value=0)
-
-        # Menghitung kemiripan antar pengguna
-        from sklearn.metrics.pairwise import cosine_similarity
-
-        user_similarity = cosine_similarity(user_item_matrix)
-        user_similarity_df = pd.DataFrame(user_similarity, index=user_item_matrix.index, columns=user_item_matrix.index)
-        print("✅ Service: Matriks kemiripan pengguna untuk collaborative filtering berhasil dibuat.")
-    else:
-        user_item_matrix = None
-        user_similarity_df = None
-except Exception as e:
-    print(f"❌ ERROR saat membuat matriks collaborative: {e}")
-    user_item_matrix = None
-    user_similarity_df = None
-
-
-# [FUNGSI BARU 1] Untuk mencari riwayat buku
-def get_user_history(username):
-    if user_item_matrix is None or username not in user_item_matrix.index:
-        return []
-
-    # Ambil buku yang skornya lebih dari 0
-    user_books = user_item_matrix.loc[username]
-    history = user_books[user_books > 0].index.tolist()
-    return history
-
-
-# [FUNGSI BARU 2] Untuk rekomendasi collaborative
-def get_collaborative_recommendations(username, top_n=5):
-    if user_similarity_df is None or username not in user_similarity_df.index:
-        return []
-
-    # 1. Cari 5 pengguna lain yang paling mirip (tidak termasuk diri sendiri)
-    similar_users = user_similarity_df[username].sort_values(ascending=False)[1:6]
-
-    # 2. Ambil semua buku yang sudah dibaca oleh pengguna-pengguna mirip tersebut
-    similar_users_books = user_item_matrix.loc[similar_users.index]
-
-    # 3. Hitung skor rekomendasi (disederhanakan)
-    recommendation_scores = similar_users_books.sum(axis=0)
-
-    # 4. Hapus buku yang sudah pernah dipinjam oleh pengguna target
-    user_history = get_user_history(username)
-    recommendation_scores = recommendation_scores.drop(user_history, errors='ignore')
-
-    # 5. Ambil N buku teratas
-    top_books = recommendation_scores.sort_values(ascending=False).head(top_n).index.tolist()
-
-    # Ambil detail buku dari database
-    return Book.objects.filter(title__in=top_books)
-
-
-def get_hybrid_recommendations(username, num_candidates=25, top_n=5):
-    """
-    Memberikan rekomendasi hybrid:
-    1. Cari kandidat buku via Collaborative Filtering.
-    2. Urutkan ulang kandidat berdasarkan kemiripan konten (genre) dengan riwayat pengguna.
-    """
-    if user_similarity_df is None or full_books_df is None or username not in user_similarity_df.index:
-        return Book.objects.none()
-
-    # --- TAHAP 1: MENCARI KANDIDAT (COLLABORATIVE) ---
-    similar_users = user_similarity_df[username].sort_values(ascending=False)[1:num_candidates]
-    similar_users_books = user_item_matrix.loc[similar_users.index]
-    recommendation_scores = similar_users_books.sum(axis=0)
-    user_history_titles = get_user_history(username)
-    recommendation_scores = recommendation_scores.drop(user_history_titles, errors='ignore')
-
-    # Ambil judul buku kandidat
-    candidate_titles = recommendation_scores.sort_values(ascending=False).head(num_candidates).index.tolist()
-
-    # --- TAHAP 2: MEMBUAT PROFIL KONTEN PENGGUNA ---
-    # Cari genre apa yang paling sering dibaca oleh pengguna ini
-    user_history_df = full_books_df[full_books_df['judul'].isin(user_history_titles)]
-    user_genres = user_history_df['genre'].str.split(', ').explode().str.strip().value_counts()
-
-    # Ambil 3 genre teratas
-    top_user_genres = user_genres.head(3).index.tolist()
-
-    # --- TAHAP 3: MEMBERI SKOR ULANG & MENGURUTKAN (CONTENT-BASED) ---
-    final_scores = {}
-    candidate_books_df = full_books_df[full_books_df['judul'].isin(candidate_titles)]
-
-    for index, book in candidate_books_df.iterrows():
-        score = 0
-        book_genres_str = str(book.get('genre', ''))
-        book_genres = [g.strip().lower() for g in book_genres_str.split(',')]
-
-        # Tambah skor untuk setiap genre yang cocok dengan profil pengguna
-        for user_genre in top_user_genres:
-            if user_genre.lower() in book_genres:
-                score += 1
-
-        # Tambahkan skor rating sebagai bonus
-        score += 0.2 * book['rating']
-        final_scores[book['judul']] = score
-
-    # Urutkan berdasarkan skor konten yang baru
-    sorted_by_content = sorted(final_scores.items(), key=lambda item: item[1], reverse=True)
-
-    # Ambil N judul teratas
-    final_recommended_titles = [title for title, score in sorted_by_content[:top_n]]
-
-    # Ambil objek buku lengkap dari database
-    return Book.objects.filter(title__in=final_recommended_titles)
-
-
-
-# EVALUATION
-
-def evaluate_collaborative_detailed(username):
-    """
-    Memberikan laporan super detail tentang proses collaborative filtering.
-    """
-    if user_similarity_df is None or username not in user_similarity_df.index:
+        interactions = (
+            df.dropna(subset=['username', 'skor'])
+            .groupby(['username', 'judul'])['skor'].max()
+        )
+        user_item = interactions.unstack(fill_value=0)
+        # errstate: BLAS bawaan macOS memberi RuntimeWarning palsu pada matmul; hasilnya tetap benar.
+        with np.errstate(all='ignore'):
+            similarity = cosine_similarity(user_item.values)
+        user_similarity = pd.DataFrame(similarity, index=user_item.index, columns=user_item.index)
+    except Exception:
+        logger.exception('Gagal memuat data sistem rekomendasi')
         return None
 
-    # Langkah 1: Dapatkan riwayat buku dari pengguna target
-    target_user_history = set(get_user_history(username))
-
-    # Langkah 2: Dapatkan 5 pengguna paling mirip
-    similar_users = user_similarity_df[username].sort_values(ascending=False)[1:6]
-
-    evaluation_report = []
-    # Langkah 3: Untuk setiap pengguna mirip, cari tahu kenapa mereka mirip
-    for similar_user_name, similarity_score in similar_users.items():
-        similar_user_history = set(get_user_history(similar_user_name))
-
-        # Cari buku apa saja yang mereka baca BERSAMAAN
-        common_books = list(target_user_history.intersection(similar_user_history))
-
-        # Cari buku rekomendasi (buku yang dimiliki user mirip, tapi tidak oleh user target)
-        new_recommendations = list(similar_user_history.difference(target_user_history))
-
-        evaluation_report.append({
-            'username': similar_user_name,
-            'similarity_score': similarity_score,
-            'common_books': common_books[:5],  # Tampilkan maks 5 buku
-            'new_recommendations': new_recommendations[:3]  # Tampilkan maks 3 rekomendasi baru dari user ini
-        })
-
-    return evaluation_report
+    logger.info('Data rekomendasi dimuat: %d buku, %d pembaca', len(books), len(user_item))
+    return RecommenderData(
+        titles=titles,
+        positions={title: i for i, title in enumerate(titles)},
+        content_similarity=content_similarity,
+        books=books,
+        user_item=user_item,
+        user_similarity=user_similarity,
+    )
 
 
-def evaluate_content_based_detailed(book_title):
-    """
-    Memberikan laporan perbandingan atribut yang sangat detail antara
-    buku sumber dan buku-buku yang direkomendasikan.
-    """
-    if books_df_from_pkl is None or similarity_matrix is None or full_books_df is None:
+# ---------------------------------------------------------------------------
+# Fungsi bantu
+# ---------------------------------------------------------------------------
+
+def _books_in_order(titles):
+    """Ambil objek Book dari database dengan urutan yang sama seperti `titles`."""
+    found = Book.objects.in_bulk(list(titles), field_name='title')
+    return [found[t] for t in titles if t in found]
+
+
+def _rating(data, title):
+    rating = data.books.at[title, 'rating']
+    return 0.0 if pd.isna(rating) else float(rating)
+
+
+def _genre_overlap(a, b):
+    a, b = set(a), set(b)
+    return len(a & b) / len(a | b) if a and b else 0.0
+
+
+def _neighbors(data, username, k):
+    """k pembaca paling mirip (selain dirinya sendiri) yang skor kemiripannya > 0."""
+    sims = data.user_similarity.loc[username].drop(username)
+    sims = sims[sims > 0]
+    return sims.sort_values(ascending=False, kind='mergesort').head(k)
+
+
+def _read_titles(data, username):
+    row = data.user_item.loc[username]
+    return row[row > 0]
+
+
+def _candidate_scores(data, username, neighbors):
+    """Jumlah skor interaksi para tetangga untuk buku yang belum dibaca pembaca target."""
+    if neighbors.empty:
+        return pd.Series(dtype=float)
+    scores = data.user_item.loc[neighbors.index].sum(axis=0)
+    scores = scores.drop(_read_titles(data, username).index)
+    return scores[scores > 0].sort_values(ascending=False, kind='mergesort')
+
+
+def _has_user(data, username):
+    return data is not None and username in data.user_item.index
+
+
+# ---------------------------------------------------------------------------
+# Data untuk form
+# ---------------------------------------------------------------------------
+
+def dataset_users():
+    data = get_data()
+    return data.user_item.index.tolist() if data else []
+
+
+def dataset_titles():
+    data = get_data()
+    return sorted(data.titles, key=str.lower) if data else []
+
+
+def popular_genres(limit=12):
+    data = get_data()
+    if not data:
+        return []
+    counts = Counter(g for genres in data.books['genres'] for g in genres)
+    return [genre for genre, _ in counts.most_common(limit)]
+
+
+def dataset_stats():
+    data = get_data()
+    if not data:
         return None
-
-    try:
-        # --- Langkah 1: Ambil data buku sumber ---
-        source_book_index = books_df_from_pkl[books_df_from_pkl['judul'] == book_title].index[0]
-        # Ambil detail lengkap dari DataFrame CSV
-        source_book_details = full_books_df[full_books_df['judul'] == book_title].iloc[0]
-        source_genres = set([g.strip().lower() for g in str(source_book_details.get('genre', '')).split(',')])
-        source_author = source_book_details.get('penulis', '').lower()
-
-        # --- Langkah 2: Dapatkan buku-buku yang mirip ---
-        distances = sorted(list(enumerate(similarity_matrix[source_book_index])), reverse=True, key=lambda x: x[1])
-
-        evaluation_report = []
-        for i in distances[1:6]:  # Ambil top 5
-            recommended_book_title = books_df_from_pkl.iloc[i[0]].judul
-
-            # Ambil detail lengkap buku rekomendasi dari DataFrame CSV
-            rec_book_details = full_books_df[full_books_df['judul'] == recommended_book_title].iloc[0]
-            rec_genres = set([g.strip().lower() for g in str(rec_book_details.get('genre', '')).split(',')])
-            rec_author = rec_book_details.get('penulis', '').lower()
-
-            # --- Langkah 3: Lakukan Perbandingan Detail ---
-            matches = []
-            # Bandingkan Penulis
-            if rec_author == source_author:
-                matches.append({'attribute': 'Author', 'value': rec_book_details.get('penulis')})
-
-            # Bandingkan Genre
-            common_genres = source_genres.intersection(rec_genres)
-            if common_genres:
-                matches.append({'attribute': 'Genre', 'value': ', '.join(g.title() for g in common_genres)})
-
-            evaluation_report.append({
-                'book_object': Book.objects.get(title=recommended_book_title),  # Kirim objek buku asli
-                'similarity_score': i[1],
-                'matches': matches  # Kirim daftar kecocokan
-            })
-
-        return evaluation_report
-    except (IndexError, KeyError, Book.DoesNotExist) as e:
-        print(f"Error pada evaluasi content-based: {e}")
-        return None
+    genres = {g for genres in data.books['genres'] for g in genres}
+    return {'books': len(data.books), 'readers': len(data.user_item), 'genres': len(genres)}
 
 
-# Tambahkan fungsi ini di bagian akhir file sistem/recommendation_service.py
+def user_history(username):
+    """Riwayat pinjam pembaca dataset, diurutkan dari interaksi terkuat."""
+    data = get_data()
+    if not _has_user(data, username):
+        return []
+    read = _read_titles(data, username).sort_values(ascending=False, kind='mergesort')
+    return [{'title': title, 'status': STATUS_LABELS.get(int(score), '')} for title, score in read.items()]
 
-def evaluate_hybrid_detailed(username, num_candidates=25):
+
+# ---------------------------------------------------------------------------
+# Content-Based Filtering
+# ---------------------------------------------------------------------------
+
+def content_based(title, n=5):
     """
-    Memberikan laporan detail tentang proses rekomendasi hybrid langkah demi langkah.
+    Buku paling mirip dengan `title` menurut matriks kemiripan konten (similarity.pkl).
+    Jika skor kemiripan sama (termasuk 0), urutan ditentukan oleh kesamaan genre lalu rating.
     """
-    if user_similarity_df is None or full_books_df is None or username not in user_similarity_df.index:
-        return None
+    data = get_data()
+    if not data or title not in data.positions:
+        return []
 
-    report = {}
+    pos = data.positions[title]
+    source_genres = data.books.at[title, 'genres']
+    source_author = str(data.books.at[title, 'penulis']).strip().lower()
 
-    # --- TAHAP 1: PENCARIAN KANDIDAT (COLLABORATIVE) ---
-    similar_users = user_similarity_df[username].sort_values(ascending=False)[1:num_candidates]
-    similar_users_books = user_item_matrix.loc[similar_users.index]
-    recommendation_scores = similar_users_books.sum(axis=0)
-    user_history_titles = get_user_history(username)
-    recommendation_scores = recommendation_scores.drop(user_history_titles, errors='ignore')
-    candidate_titles = recommendation_scores.sort_values(ascending=False).head(num_candidates).index.tolist()
+    ranked = []
+    for i, score in enumerate(data.content_similarity[pos]):
+        other = data.titles[i]
+        if i == pos or other not in data.books.index:
+            continue
+        overlap = _genre_overlap(source_genres, data.books.at[other, 'genres'])
+        ranked.append((-float(score), -overlap, -_rating(data, other), other))
+    ranked.sort()
+    top = ranked[:n]
 
-    report['stage1_candidates'] = {
-        'count': len(candidate_titles),
-        'books': candidate_titles
-    }
+    books = {b.title: b for b in _books_in_order([t for *_, t in top])}
+    likers = list(Favorite.objects.filter(book__title=title).values_list('user_id', flat=True))
 
-    # --- TAHAP 2: PEMBUATAN PROFIL KONTEN PENGGUNA ---
-    user_history_df = full_books_df[full_books_df['judul'].isin(user_history_titles)]
-    user_genres = user_history_df['genre'].str.split(', ').explode().str.strip().value_counts()
-    top_user_genres = user_genres.head(3).index.tolist()
+    items = []
+    for neg_score, _, _, other in top:
+        if other not in books:
+            continue
+        book = books[other]
+        shared_genres = [g for g in source_genres if g in data.books.at[other, 'genres']]
+        same_author = str(data.books.at[other, 'penulis']).strip().lower() == source_author
 
-    report['stage2_profile'] = {
-        'top_genres': top_user_genres
-    }
-
-    # --- TAHAP 3: PENGURUTAN ULANG (CONTENT-BASED) ---
-    final_scores = {}
-    candidate_books_df = full_books_df[full_books_df['judul'].isin(candidate_titles)].copy()
-
-    # Buat kolom baru untuk alasan re-ranking
-    candidate_books_df['reasoning'] = ''
-
-    for index, book in candidate_books_df.iterrows():
-        score = 0
-        matching_reasons = []
-        book_genres_str = str(book.get('genre', ''))
-        book_genres = [g.strip().lower() for g in book_genres_str.split(',')]
-
-        for user_genre in top_user_genres:
-            if user_genre.lower() in book_genres:
-                score += 1
-                matching_reasons.append(user_genre.title())
-
-        score += 0.2 * book['rating']
-        final_scores[book['judul']] = score
-
-        # Simpan alasan kecocokan
-        if matching_reasons:
-            candidate_books_df.loc[index, 'reasoning'] = f"Cocok dengan genre: {', '.join(matching_reasons)}"
+        if same_author:
+            reason = 'Ditulis oleh penulis yang sama.'
+        elif -neg_score > 0:
+            reason = 'Judul atau penulisnya mirip.'
+        elif shared_genres:
+            reason = 'Memiliki genre yang sama.'
         else:
-            candidate_books_df.loc[index, 'reasoning'] = "Skor dari rating & popularitas"
+            reason = 'Pilihan dengan rating tinggi.'
 
-    # Tambahkan skor akhir ke DataFrame kandidat
-    candidate_books_df['final_score'] = candidate_books_df['judul'].map(final_scores)
+        social_proof = None
+        if len(likers) >= SOCIAL_PROOF_MIN_LIKERS:
+            also_liked = Favorite.objects.filter(user_id__in=likers, book=book).count()
+            if also_liked:
+                social_proof = f'{round(also_liked / len(likers) * 100)}% penyuka buku ini juga memfavoritkannya.'
 
-    # Urutkan berdasarkan skor akhir
-    reranked_df = candidate_books_df.sort_values(by='final_score', ascending=False)
+        items.append({
+            'book': book,
+            'score': -neg_score,
+            'shared_genres': shared_genres,
+            'tags': shared_genres,
+            'same_author': same_author,
+            'reason': reason,
+            'social_proof': social_proof,
+        })
+    return items
 
-    report['stage3_reranked_books'] = reranked_df.head(10).to_dict('records')
 
-    return report
+def filter_books(genres=(), rating_min=None, max_pages=None, n=10):
+    """Buku yang memenuhi filter. Genre dicocokkan secara utuh (memilih "fiksi" tidak ikut "nonfiksi")."""
+    data = get_data()
+    if not data:
+        return []
+    wanted = [g.lower() for g in genres]
+
+    ranked = []
+    for title, row in data.books.iterrows():
+        rating = row['rating']
+        pages = row['jml hlm']
+        if rating_min is not None and (pd.isna(rating) or rating < rating_min):
+            continue
+        if max_pages is not None and (pd.isna(pages) or pages > max_pages):
+            continue
+        matched = [g for g in wanted if g in row['genres']]
+        if wanted and not matched:
+            continue
+        ranked.append((-len(matched), -_rating(data, title), title, matched))
+    ranked.sort(key=lambda r: r[:3])
+    top = ranked[:n]
+
+    books = {b.title: b for b in _books_in_order([r[2] for r in top])}
+    items = []
+    for _, _, title, matched in top:
+        if title not in books:
+            continue
+        tags = [g.title() for g in matched]
+        if rating_min is not None:
+            tags.append(f'Rating ≥ {rating_min:g}')
+        if max_pages is not None:
+            tags.append(f'≤ {max_pages} halaman')
+        items.append({'book': books[title], 'reason': 'Sesuai filter: ' + ', '.join(tags) if tags else None})
+    return items
+
+
+# ---------------------------------------------------------------------------
+# Collaborative Filtering
+# ---------------------------------------------------------------------------
+
+def collaborative(username, n=5):
+    data = get_data()
+    if not _has_user(data, username):
+        return []
+    neighbors = _neighbors(data, username, COLLABORATIVE_NEIGHBORS)
+    scores = _candidate_scores(data, username, neighbors).head(n)
+    neighbor_rows = data.user_item.loc[neighbors.index]
+
+    items = []
+    for book in _books_in_order(scores.index):
+        readers = int((neighbor_rows[book.title] > 0).sum())
+        items.append({
+            'book': book,
+            'score': float(scores[book.title]),
+            'reason': f'Dibaca {readers} dari {len(neighbors)} pembaca dengan selera serupa.',
+        })
+    return items
+
+
+def evaluate_collaborative(username):
+    data = get_data()
+    if not _has_user(data, username):
+        return None
+    history = set(_read_titles(data, username).index)
+    neighbors = []
+    for name, similarity in _neighbors(data, username, COLLABORATIVE_NEIGHBORS).items():
+        their_books = set(_read_titles(data, name).index)
+        neighbors.append({
+            'username': name,
+            'similarity': float(similarity),
+            'common_books': sorted(history & their_books, key=str.lower),
+            'new_books': sorted(their_books - history, key=str.lower),
+        })
+    return {
+        'history': user_history(username),
+        'neighbors': neighbors,
+        'recommendations': collaborative(username),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Hybrid: kandidat dari Collaborative, lalu diurutkan ulang dengan profil genre (Content-Based)
+# ---------------------------------------------------------------------------
+
+def hybrid_report(username, n=5, show=10):
+    data = get_data()
+    if not _has_user(data, username):
+        return None
+
+    neighbors = _neighbors(data, username, HYBRID_NEIGHBORS)
+    candidates = _candidate_scores(data, username, neighbors).head(HYBRID_CANDIDATES)
+
+    # Profil genre dihitung dari buku unik yang pernah dipinjam pembaca ini.
+    history = _read_titles(data, username).sort_values(ascending=False, kind='mergesort')
+    genre_counts = Counter(g for title in history.index for g in data.books.at[title, 'genres'])
+    top_genres = [g for g, _ in genre_counts.most_common(HYBRID_TOP_GENRES)]
+
+    ranked = []
+    for title, collab_score in candidates.items():
+        matched = [g for g in top_genres if g in data.books.at[title, 'genres']]
+        rating = _rating(data, title)
+        score = len(matched) + HYBRID_RATING_WEIGHT * rating
+        ranked.append({
+            'title': title,
+            'score': score,
+            'collab_score': float(collab_score),
+            'rating': rating,
+            'matched_genres': matched,
+            'tags': matched,
+            'reason': (
+                f"Cocok dengan genre favorit: {', '.join(g.title() for g in matched)}."
+                if matched else 'Tidak ada genre yang cocok; skor hanya dari rating.'
+            ),
+        })
+    ranked.sort(key=lambda r: (-r['score'], -r['collab_score'], r['title']))
+
+    shown = ranked[:max(n, show)]
+    books = {b.title: b for b in _books_in_order([r['title'] for r in shown])}
+    for row in shown:
+        row['book'] = books.get(row['title'])
+
+    return {
+        'neighbor_count': len(neighbors),
+        'candidates': [{'title': t, 'score': float(s)} for t, s in candidates.items()],
+        'top_genres': top_genres,
+        'ranked': [r for r in shown[:show] if r['book']],
+        'recommendations': [r for r in shown[:n] if r['book']],
+    }
+
+
+def hybrid(username, n=5):
+    report = hybrid_report(username, n=n)
+    return report['recommendations'] if report else []

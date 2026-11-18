@@ -1,0 +1,147 @@
+{% extends 'sistem/recommend_base.html' %}
+{% block title %}Evaluasi Sistem{% endblock %}
+
+{% block header %}
+{% include 'sistem/partials/page_header.html' with back_url=hub_url back_label='Semua metode' eyebrow='Evaluasi' title='Bagaimana rekomendasi dibuat' subtitle='Uraian langkah demi langkah dari setiap metode, lengkap dengan skor yang dipakai untuk mengurutkan hasil.' %}
+{% endblock %}
+
+{% block form %}
+<div class="tabs" role="tablist">
+    <a href="?tab=collaborative" class="tab{% if tab == 'collaborative' %} is-active{% endif %}" role="tab" aria-selected="{% if tab == 'collaborative' %}true{% else %}false{% endif %}">1. Collaborative</a>
+    <a href="?tab=content" class="tab{% if tab == 'content' %} is-active{% endif %}" role="tab" aria-selected="{% if tab == 'content' %}true{% else %}false{% endif %}">2. Content-Based</a>
+    <a href="?tab=hybrid" class="tab{% if tab == 'hybrid' %} is-active{% endif %}" role="tab" aria-selected="{% if tab == 'hybrid' %}true{% else %}false{% endif %}">3. Hybrid</a>
+</div>
+{% if tab == 'content' %}
+    {% include 'sistem/partials/picker_form.html' with name='title' tab=tab options=all_titles selected=selected_title label='Pilih buku untuk dianalisis' placeholder='Contoh: A Man Called Ove' button='Analisis buku' %}
+{% else %}
+    {% include 'sistem/partials/picker_form.html' with name='user' tab=tab options=all_users selected=selected_user label='Pilih pembaca untuk dianalisis' placeholder='Contoh: @cahayailahiy' button='Analisis pembaca' %}
+{% endif %}
+{% endblock %}
+
+{% block results %}
+{# ---------------- Collaborative ---------------- #}
+{% if tab == 'collaborative' and report %}
+<ol class="steps">
+    <li class="step">
+        <h2 class="step-title">Riwayat pinjam <span class="highlight">{{ selected_user }}</span></h2>
+        <p class="muted">Skor interaksi: sedang dipinjam = 3, sudah dipinjam = 2, dalam antrean = 1.</p>
+        <ul class="history">
+            {% for entry in report.history %}<li><span>{{ entry.title }}</span><span class="badge">{{ entry.status }}</span></li>{% endfor %}
+        </ul>
+    </li>
+    <li class="step">
+        <h2 class="step-title">Mencari pembaca serupa</h2>
+        <p class="muted">Kemiripan dihitung dengan <em>cosine similarity</em> antar vektor skor interaksi. Diambil 5 pembaca dengan skor tertinggi.</p>
+        <div class="table-wrap">
+            <table class="table">
+                <thead><tr><th>Pembaca</th><th class="num">Kemiripan</th><th>Buku yang sama-sama dipinjam</th></tr></thead>
+                <tbody>
+                    {% for n in report.neighbors %}
+                    <tr><td><strong>{{ n.username }}</strong></td><td class="num"><span class="score">{{ n.similarity|floatformat:4 }}</span></td><td>{{ n.common_books|join:', ' }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="muted">Tidak ada pembaca lain yang cukup mirip.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </li>
+    <li class="step">
+        <h2 class="step-title">Menyusun rekomendasi</h2>
+        <p class="muted">Buku yang dipinjam para pembaca serupa tetapi belum dipinjam <em>{{ selected_user }}</em> dijumlahkan skornya, lalu diambil 5 teratas.</p>
+        <div class="table-wrap">
+            <table class="table">
+                <thead><tr><th>#</th><th>Judul</th><th class="num">Skor</th><th>Alasan</th></tr></thead>
+                <tbody>
+                    {% for item in report.recommendations %}
+                    <tr><td>{{ forloop.counter }}</td><td><a href="{% url 'sistem:book_detail' item.book.id %}">{{ item.book.title }}</a></td><td class="num"><span class="score">{{ item.score|floatformat:0 }}</span></td><td>{{ item.reason }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="muted">Pembaca serupa tidak meminjam buku lain yang belum dibaca pembaca ini.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </li>
+</ol>
+{% endif %}
+
+{# ---------------- Content-Based ---------------- #}
+{% if tab == 'content' and source_book %}
+<ol class="steps">
+    <li class="step">
+        <h2 class="step-title">Profil buku <span class="highlight">“{{ source_book.title }}”</span></h2>
+        <dl class="meta">
+            <div><dt>Penulis</dt><dd>{{ source_book.author }}</dd></div>
+            <div><dt>Rating</dt><dd>{{ source_book.rating|floatformat:2|default:'–' }}</dd></div>
+            <div><dt>Genre</dt><dd>{{ source_book.genre_list|join:', '|title }}</dd></div>
+        </dl>
+    </li>
+    <li class="step">
+        <h2 class="step-title">Buku paling mirip</h2>
+        <p class="muted">Diurutkan berdasarkan skor kemiripan dari model (<code>similarity.pkl</code>). Jika skornya sama, buku dengan genre lebih mirip dan rating lebih tinggi didahulukan.</p>
+        <div class="table-wrap">
+            <table class="table">
+                <thead><tr><th>#</th><th>Judul</th><th class="num">Kemiripan</th><th>Kecocokan atribut</th></tr></thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td><a href="{% url 'sistem:book_detail' item.book.id %}">{{ item.book.title }}</a><div class="muted small">{{ item.book.author }}</div></td>
+                        <td class="num"><span class="score">{{ item.score|floatformat:4 }}</span></td>
+                        <td>
+                            {% if item.same_author %}<span class="chip chip-sm chip-accent">Penulis sama</span>{% endif %}
+                            {% for g in item.shared_genres %}<span class="chip chip-sm">{{ g|title }}</span>{% endfor %}
+                            {% if not item.same_author and not item.shared_genres %}<span class="muted">Tidak ada atribut yang sama</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="muted">Tidak ada buku serupa.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </li>
+</ol>
+{% endif %}
+
+{# ---------------- Hybrid ---------------- #}
+{% if tab == 'hybrid' and report %}
+<ol class="steps">
+    <li class="step">
+        <h2 class="step-title">Kandidat dari Collaborative Filtering</h2>
+        <p class="muted">Dari {{ report.neighbor_count }} pembaca yang mirip dengan <em>{{ selected_user }}</em>, ditemukan <strong>{{ report.candidates|length }} buku kandidat</strong>.</p>
+        {% if report.candidates %}
+        <div class="chip-row">{% for c in report.candidates %}<span class="chip">{{ c.title }} <span class="muted">· {{ c.score|floatformat:0 }}</span></span>{% endfor %}</div>
+        {% endif %}
+    </li>
+    <li class="step">
+        <h2 class="step-title">Profil genre pembaca</h2>
+        <p class="muted">Tiga genre yang paling sering muncul di riwayat pinjam <em>{{ selected_user }}</em>:</p>
+        <div class="chip-row">
+            {% for g in report.top_genres %}<span class="chip chip-accent">{{ g|title }}</span>{% empty %}<span class="muted">Tidak ada data genre.</span>{% endfor %}
+        </div>
+    </li>
+    <li class="step">
+        <h2 class="step-title">Pengurutan ulang &amp; hasil akhir</h2>
+        <p class="muted">Skor akhir = jumlah genre favorit yang cocok + 0,2 × rating. Lima teratas menjadi rekomendasi.</p>
+        <div class="table-wrap">
+            <table class="table">
+                <thead><tr><th>#</th><th>Judul</th><th class="num">Genre cocok</th><th class="num">Rating</th><th class="num">Skor akhir</th></tr></thead>
+                <tbody>
+                    {% for row in report.ranked %}
+                    <tr{% if forloop.counter <= 5 %} class="is-highlight"{% endif %}>
+                        <td>{{ forloop.counter }}</td>
+                        <td><a href="{% url 'sistem:book_detail' row.book.id %}">{{ row.title }}</a><div class="muted small">{{ row.reason }}</div></td>
+                        <td class="num">{{ row.matched_genres|length }}</td>
+                        <td class="num">{{ row.rating|floatformat:2 }}</td>
+                        <td class="num"><span class="score">{{ row.score|floatformat:2 }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="muted">Tidak ada kandidat untuk diurutkan.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </li>
+</ol>
+{% endif %}
+{% endblock %}

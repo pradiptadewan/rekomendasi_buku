@@ -1,300 +1,255 @@
-import pandas as pd
-from django.core.paginator import Paginator
-from django.db.models import Q, Count
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from .recommendation_service import get_filtered_recommendations_with_strong_reasons, books_df_from_pkl, \
-    evaluate_content_based_detailed, evaluate_collaborative_detailed, evaluate_hybrid_detailed
-from .recommendation_service import get_user_history, get_collaborative_recommendations, user_item_matrix
-from .recommendation_service import full_books_df
-from .recommendation_service import get_hybrid_recommendations # Tambahkan ini di import
-from .forms import CustomUserCreationForm
-from .models import Book, Favorite
-from .recommendation_service import get_recommendations_with_strong_reasons
+from django.core.paginator import Paginator
+from django.db.models import Count, F, Q
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 
+from . import recommendation_service as rec
+from .forms import LoginForm, RegisterForm
+from .models import Book, Favorite
+
+BOOKS_PER_PAGE = 12
+SORT_OPTIONS = {
+    'populer': ('Paling populer', ['-num_favorites', F('rating').desc(nulls_last=True), 'title']),
+    'rating': ('Rating tertinggi', [F('rating').desc(nulls_last=True), 'title']),
+    'judul': ('Judul (A–Z)', ['title']),
+}
+
+
+def _popular_books():
+    return Book.objects.annotate(num_favorites=Count('favorites')).order_by(*SORT_OPTIONS['populer'][1])
+
+
+def _redirect_back(request, fallback='sistem:dashboard'):
+    """Kembali ke halaman asal (parameter `next`), hanya jika URL-nya aman."""
+    target = request.POST.get('next') or request.GET.get('next')
+    if target and url_has_allowed_host_and_scheme(target, {request.get_host()}, request.is_secure()):
+        return redirect(target)
+    return redirect(fallback)
+
+
+def _to_number(value, cast, minimum=None, maximum=None):
+    """Ubah input form menjadi angka; kembalikan None jika kosong atau tidak valid."""
+    try:
+        number = cast(str(value).replace(',', '.'))
+    except (TypeError, ValueError):
+        return None
+    if (minimum is not None and number < minimum) or (maximum is not None and number > maximum):
+        return None
+    return number
+
+
+# ---------------------------------------------------------------------------
+# Halaman umum
+# ---------------------------------------------------------------------------
 
 def home(request):
-    return render(request, 'sistem/home.html')
+    return render(request, 'sistem/home.html', {
+        'stats': rec.dataset_stats(),
+        'popular_books': _popular_books()[:4],
+    })
 
-def input_view(request):
-    return render(request, 'sistem/input.html')
+
+def dashboard(request):
+    return render(request, 'sistem/dashboard.html', {
+        'popular_books': _popular_books()[:8],
+        'top_rated_books': Book.objects.order_by(*SORT_OPTIONS['rating'][1])[:8],
+        'genres': rec.popular_genres(10),
+    })
+
+
+def book_list(request):
+    query = request.GET.get('q', '').strip()
+    genre = request.GET.get('genre', '').strip().lower()
+    sort = request.GET.get('sort', 'populer')
+    if sort not in SORT_OPTIONS:
+        sort = 'populer'
+
+    books = Book.objects.annotate(num_favorites=Count('favorites'))
+    if query:
+        books = books.filter(Q(title__icontains=query) | Q(author__icontains=query))
+    if genre:
+        # Cocokkan genre secara utuh di daftar "a, b, c".
+        books = [b for b in books.filter(genre__icontains=genre).order_by(*SORT_OPTIONS[sort][1])
+                 if genre in b.genre_list]
+    else:
+        books = books.order_by(*SORT_OPTIONS[sort][1])
+
+    page_obj = Paginator(books, BOOKS_PER_PAGE).get_page(request.GET.get('page'))
+    return render(request, 'sistem/book_list.html', {
+        'page_obj': page_obj,
+        'query': query,
+        'genre': genre,
+        'sort': sort,
+        'sort_options': {key: label for key, (label, _) in SORT_OPTIONS.items()},
+        'genres': rec.popular_genres(20),
+    })
+
+
+def book_detail(request, pk):
+    book = get_object_or_404(Book, pk=pk)
+    return render(request, 'sistem/book_detail.html', {
+        'book': book,
+        'similar_items': rec.content_based(book.title, n=4),
+    })
+
+
+# ---------------------------------------------------------------------------
+# Autentikasi
+# ---------------------------------------------------------------------------
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return _redirect_back(request)
+    form = LoginForm(request, data=request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        login(request, form.get_user())
+        if not form.cleaned_data.get('remember_me'):
+            request.session.set_expiry(0)  # sesi berakhir saat browser ditutup
+        messages.success(request, f'Selamat datang kembali, {form.get_user().username}!')
+        return _redirect_back(request)
+    return render(request, 'sistem/login.html', {'form': form, 'next': request.GET.get('next', '')})
 
 
 def register_view(request):
     if request.user.is_authenticated:
-        return redirect('sistem:dashboard_user')
-    if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            username = form.cleaned_data.get('username')
-            messages.success(request, f'Akun untuk {username} berhasil dibuat. Silakan login.')
-            return redirect('sistem:login')
-    else:
-        form = CustomUserCreationForm()
+        return redirect('sistem:dashboard')
+    form = RegisterForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        user = form.save()
+        login(request, user)
+        messages.success(request, f'Akun {user.username} berhasil dibuat. Selamat datang!')
+        return redirect('sistem:dashboard')
     return render(request, 'sistem/register.html', {'form': form})
 
-def login_view(request):
-    if request.user.is_authenticated:
-        return redirect('sistem:dashboard_user')
-    if request.method == 'POST':
-        username_input = request.POST.get('username_email')
-        password_input = request.POST.get('password')
-        if not username_input or not password_input:
-            messages.error(request, 'Username dan Password tidak boleh kosong.')
-            return render(request, 'sistem/login.html')
-        user = authenticate(request, username=username_input, password=password_input)
-        if user is not None:
-            if not request.POST.get('remember_me', None):
-                request.session.set_expiry(0)
-            login(request, user)
-            return redirect('sistem:dashboard_user')
-        else:
-            messages.error(request, 'Username atau Password salah.')
-            return render(request, 'sistem/login.html')
-    return render(request, 'sistem/login.html')
 
+@require_POST
 def logout_view(request):
     logout(request)
-    messages.info(request, 'Anda telah berhasil logout.')
-    return redirect('sistem:login')
+    messages.info(request, 'Anda telah keluar.')
+    return redirect('sistem:home')
 
-@login_required
-def dashboard_user(request):
-    query = request.GET.get('q')
-    if query:
-        books_to_display = Book.objects.filter(
-            Q(title__icontains=query) | Q(author__icontains=query)
-        ).distinct()
-    else:
-        books_to_display = Book.objects.annotate(
-            num_favorites=Count('favorite')
-        ).order_by('-num_favorites')[:8]
-    context = {
-        'books': books_to_display,
-        'search_query': query,
-    }
-    return render(request, 'sistem/dashboard_user.html', context)
 
-def book_detail_view(request, book_id):
-    book = get_object_or_404(Book, id=book_id)
-    context = {'book': book}
-    return render(request, 'sistem/details.html', context)
-
-@login_required
-def add_to_favorite(request, book_id):
-    book = get_object_or_404(Book, id=book_id)
-    favorite, created = Favorite.objects.get_or_create(user=request.user, book=book)
-    if created:
-        messages.success(request, f"'{book.title}' telah ditambahkan ke favorit Anda!")
-    else:
-        messages.info(request, f"'{book.title}' sudah ada di daftar favorit Anda.")
-    return redirect('sistem:dashboard_user')
+# ---------------------------------------------------------------------------
+# Favorit
+# ---------------------------------------------------------------------------
 
 @login_required
 def favorite_list(request):
-    favorite_books = Book.objects.filter(favorite__user=request.user)
-    context = {'favorite_books': favorite_books}
-    return render(request, 'sistem/favorite.html', context)
+    favorites = Favorite.objects.filter(user=request.user).select_related('book')
+    return render(request, 'sistem/favorites.html', {'books': [f.book for f in favorites]})
+
 
 @login_required
-def remove_from_favorite(request, book_id):
-    book = get_object_or_404(Book, id=book_id)
-    favorite_entry = Favorite.objects.filter(user=request.user, book=book)
-    if favorite_entry.exists():
-        favorite_entry.delete()
-        messages.success(request, f"'{book.title}' telah dihapus dari favorit Anda.")
-    return redirect('sistem:favorite_list')
-
-@login_required
-def all_popular_books_view(request):
-    all_books_list = Book.objects.annotate(
-        num_favorites=Count('favorite')
-    ).order_by('-num_favorites')
-    paginator = Paginator(all_books_list, 12)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    context = {'page_obj': page_obj}
-    return render(request, 'sistem/all_popular_books.html', context)
-
-def dashboard_admin(request):
-    # Pertama, cek apakah ada pengguna yang sudah login mencoba mengakses halaman ini
-    if request.user.is_authenticated:
-        # Jika ya, langsung arahkan ke dashboard pribadi mereka
-        return redirect('sistem:dashboard_user')
-
-    # Logikanya sekarang hampir sama dengan dashboard_user
-    query = request.GET.get('q')
-
-    if query:
-        # Jika ada pencarian, filter buku
-        books_to_display = Book.objects.filter(
-            Q(title__icontains=query) | Q(author__icontains=query)
-        ).distinct()
+@require_POST
+def favorite_add(request, pk):
+    book = get_object_or_404(Book, pk=pk)
+    _, created = Favorite.objects.get_or_create(user=request.user, book=book)
+    if created:
+        messages.success(request, f'"{book.title}" ditambahkan ke favorit.')
     else:
-        # Jika tidak ada pencarian, tampilkan 8 buku terpopuler
-        books_to_display = Book.objects.annotate(
-            num_favorites=Count('favorite')
-        ).order_by('-num_favorites')[:8]
+        messages.info(request, f'"{book.title}" sudah ada di favorit.')
+    return _redirect_back(request, 'sistem:favorite_list')
 
-    context = {
-        'books': books_to_display,
-        'search_query': query,
-    }
-    return render(request, 'sistem/dashboard.html', context)
+
+@login_required
+@require_POST
+def favorite_remove(request, pk):
+    book = get_object_or_404(Book, pk=pk)
+    deleted, _ = Favorite.objects.filter(user=request.user, book=book).delete()
+    if deleted:
+        messages.success(request, f'"{book.title}" dihapus dari favorit.')
+    return _redirect_back(request, 'sistem:favorite_list')
+
+
+# ---------------------------------------------------------------------------
+# Sistem rekomendasi
+# ---------------------------------------------------------------------------
+
+def recommend_hub(request):
+    return render(request, 'sistem/recommend_hub.html')
+
+
+def _selected_reader(request, param='user'):
+    """Ambil nama pembaca dari query string; kembalikan (nama, pesan_error)."""
+    username = request.GET.get(param, '').strip()
+    if username and username not in rec.dataset_users():
+        return username, f'Pembaca "{username}" tidak ada di dataset.'
+    return username, None
+
+
+def _selected_title(request, param='title'):
+    title = request.GET.get(param, '').strip()
+    if title and title not in rec.dataset_titles():
+        return title, f'Buku "{title}" tidak ada di dataset. Pilih judul dari daftar saran.'
+    return title, None
 
 
 def collaborative_view(request):
-    # Ambil semua username unik untuk dropdown
-    all_users = user_item_matrix.index.tolist() if user_item_matrix is not None else []
-
-    # Siapkan variabel untuk hasil
-    selected_user = None
-    history = []
-    recommendations = []
-
-    if request.method == 'POST':
-        # Ambil username yang dipilih dari form
-        selected_user = request.POST.get('username')
-        if selected_user:
-            # Panggil service untuk mendapatkan riwayat dan rekomendasi
-            history = get_user_history(selected_user)
-            recommendations = get_collaborative_recommendations(selected_user)
-
-    context = {
-        'all_users': all_users,
-        'selected_user': selected_user,
-        'history': history,
-        'recommendations': recommendations
-    }
+    username, error = _selected_reader(request)
+    context = {'all_users': rec.dataset_users(), 'selected_user': username, 'error': error}
+    if username and not error:
+        context['history'] = rec.user_history(username)
+        context['items'] = rec.collaborative(username)
     return render(request, 'sistem/collaborative.html', context)
 
 
 def content_based_view(request):
-    """
-    Menangani halaman input dan output untuk Content-Based Filtering.
-    Menampilkan form dan hasil di halaman yang sama.
-    """
-    # Data yang selalu dibutuhkan untuk mengisi form
-    popular_genres = []
-    all_titles = []
-    if full_books_df is not None:
-        all_genres = full_books_df['genre'].dropna().str.split(', ').explode().str.strip().unique()
-        popular_genres = sorted([g for g in all_genres if len(g) > 2])[:12]
-        all_titles = sorted(full_books_df['judul'].unique().tolist())
-
-    # Inisialisasi variabel konteks untuk hasil
+    mode = request.GET.get('mode')
     context = {
-        'available_genres': popular_genres,
-        'all_book_titles': all_titles,
-        'recommendation_items': None,  # Gunakan None agar template bisa cek
-        'searched_title': None,
-        'user_filters': None,
+        'all_titles': rec.dataset_titles(),
+        'available_genres': rec.popular_genres(16),
+        'mode': mode,
     }
 
-    if request.method == 'POST':
-        # Cek form mana yang di-submit berdasarkan nama tombol submit
+    if mode == 'title':
+        title, error = _selected_title(request)
+        context.update(searched_title=title, error=error)
+        if title and not error:
+            context['items'] = rec.content_based(title)
+        elif not title:
+            context['error'] = 'Masukkan judul buku terlebih dahulu.'
 
-        # --- Form 1: Pencarian Berdasarkan Judul ---
-        if 'search_by_title' in request.POST:
-            book_title_searched = request.POST.get('book_title', '').strip()
-            if book_title_searched:
-                recommendation_list = get_recommendations_with_strong_reasons(
-                    book_title=book_title_searched
-                )
-                context['recommendation_items'] = recommendation_list
-                context['searched_title'] = book_title_searched
+    elif mode == 'filter':
+        genres = request.GET.getlist('genre')
+        rating_min = _to_number(request.GET.get('rating'), float, 0, 5)
+        max_pages = _to_number(request.GET.get('pages'), int, 1)
+        context.update(selected_genres=genres, rating_min=rating_min, max_pages=max_pages)
+        context['items'] = rec.filter_books(genres, rating_min, max_pages)
 
-        # --- Form 2: Pencarian Berdasarkan Filter ---
-        elif 'search_by_filter' in request.POST:
-            genres = request.POST.getlist('genres')
-            rating_str = request.POST.get('rating_min', '0')
-            rating_min = float(rating_str) if rating_str else 0.0
-            halaman_str = request.POST.get('halaman_maks')
-            halaman_maks = int(halaman_str) if halaman_str else None
-
-            recommendation_list = get_filtered_recommendations_with_strong_reasons(
-                genre_preferensi=genres,
-                rating_min=rating_min,
-                halaman_maks=halaman_maks
-            )
-            context['recommendation_items'] = recommendation_list
-            context['user_filters'] = {'genres': genres, 'rating': rating_min, 'pages': halaman_maks}
-
-    # Render template yang sama untuk GET dan POST
-    # Contex akan berisi data form dan juga data hasil (jika ada)
     return render(request, 'sistem/content_based.html', context)
 
 
 def hybrid_view(request):
-    all_users = user_item_matrix.index.tolist() if user_item_matrix is not None else []
-
-    selected_user = None
-    recommendations = []
-
-    if request.method == 'POST':
-        selected_user = request.POST.get('username')
-        if selected_user:
-            # Panggil service hybrid yang baru
-            recommendations = get_hybrid_recommendations(selected_user)
-
-    context = {
-        'all_users': all_users,
-        'selected_user': selected_user,
-        'recommendations': recommendations
-    }
+    username, error = _selected_reader(request)
+    context = {'all_users': rec.dataset_users(), 'selected_user': username, 'error': error}
+    if username and not error:
+        context['items'] = rec.hybrid(username)
     return render(request, 'sistem/hybrid.html', context)
 
 
-# Ganti fungsi evaluation_view yang lama dengan ini
-
 def evaluation_view(request):
-    # Pastikan variabel global dari service bisa diakses
-    from .recommendation_service import user_item_matrix, books_df_from_pkl
+    tab = request.GET.get('tab', 'collaborative')
+    if tab not in ('collaborative', 'content', 'hybrid'):
+        tab = 'collaborative'
+    context = {'tab': tab, 'all_users': rec.dataset_users(), 'all_titles': rec.dataset_titles()}
 
-    all_users = user_item_matrix.index.tolist() if user_item_matrix is not None else []
-    all_books = books_df_from_pkl['judul'].tolist() if books_df_from_pkl is not None else []
+    if tab == 'content':
+        title, error = _selected_title(request)
+        context.update(selected_title=title, error=error)
+        if title and not error:
+            context['source_book'] = Book.objects.filter(title=title).first()
+            context['items'] = rec.content_based(title)
+    else:
+        username, error = _selected_reader(request)
+        context.update(selected_user=username, error=error)
+        if username and not error:
+            if tab == 'collaborative':
+                context['report'] = rec.evaluate_collaborative(username)
+            else:
+                context['report'] = rec.hybrid_report(username)
 
-    context = {
-        'all_users': all_users,
-        'all_books': all_books,
-    }
-
-    if request.method == 'POST':
-        # Penanganan Tombol Collaborative
-        if 'evaluate_collaborative' in request.POST:
-            selected_user = request.POST.get('username')
-            if selected_user:
-                eval_data = evaluate_collaborative_detailed(selected_user)
-                context.update({
-                    'eval_type': 'collaborative',
-                    'selected_user': selected_user,
-                    'eval_data': eval_data
-                })
-
-        # Penanganan Tombol Content-Based
-        elif 'evaluate_content' in request.POST:
-            selected_book_title = request.POST.get('book_title')
-            if selected_book_title:
-                source_book_object = get_object_or_404(Book, title=selected_book_title)
-                eval_data = evaluate_content_based_detailed(selected_book_title)
-                context.update({
-                    'eval_type': 'content_based',
-                    'source_book': source_book_object,
-                    'eval_data': eval_data
-                })
-
-        # --- BLOK BARU UNTUK HYBRID ---
-        elif 'evaluate_hybrid' in request.POST:
-            selected_user = request.POST.get('username_hybrid')  # Ambil dari form hybrid
-            if selected_user:
-                eval_data = evaluate_hybrid_detailed(selected_user)
-                context.update({
-                    'eval_type': 'hybrid',
-                    'selected_user': selected_user,
-                    'eval_data': eval_data
-                })
-
-    return render(request, 'sistem/evaluasi.html', context)
+    return render(request, 'sistem/evaluation.html', context)

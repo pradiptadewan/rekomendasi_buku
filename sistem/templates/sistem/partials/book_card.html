@@ -1,0 +1,21 @@
+{% comment %}
+Kartu buku. Parameter: book, reason (opsional), rank (opsional), tags (opsional, list), note (opsional).
+{% endcomment %}
+<article class="book-card">
+    <a href="{% url 'sistem:book_detail' book.id %}" class="book-card-cover" tabindex="-1" aria-hidden="true">
+        {% include 'sistem/partials/book_cover.html' %}
+        {% if rank %}<span class="rank-badge">#{{ rank }}</span>{% endif %}
+    </a>
+    <div class="book-card-fav">{% include 'sistem/partials/favorite_button.html' %}</div>
+    <div class="book-card-body">
+        {% if book.genre_list %}<span class="chip chip-sm">{{ book.genre_list.0|title }}</span>{% endif %}
+        <h3 class="book-card-title"><a href="{% url 'sistem:book_detail' book.id %}">{{ book.title }}</a></h3>
+        <p class="book-card-author">{{ book.author }}</p>
+        {% if book.rating %}
+        <p class="rating">{% include 'sistem/partials/icon.html' with name='star' %}<span>{{ book.rating|floatformat:2 }}</span>{% if book.page_count %}<span class="dot">·</span><span class="muted">{{ book.page_count }} hlm</span>{% endif %}</p>
+        {% endif %}
+        {% if reason %}<p class="book-card-reason">{{ reason }}</p>{% endif %}
+        {% if tags %}<div class="chip-row">{% for tag in tags %}<span class="chip chip-sm chip-accent">{{ tag|title }}</span>{% endfor %}</div>{% endif %}
+        {% if note %}<p class="book-card-note">{{ note }}</p>{% endif %}
+    </div>
+</article>

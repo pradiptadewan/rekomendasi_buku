@@ -1,15 +1,17 @@
-
-.env
-
+# Lingkungan Python
 .venv/
 venv/
-
-db.sqlite3
-
-# File-file cache Python
 __pycache__/
 *.pyc
 
-# File media & statis yang dikumpulkan (jika ada)
-/media/
-/static/
+# Konfigurasi lokal
+.env
+.idea/
+.vscode/
+
+# Hasil collectstatic
+/staticfiles/
+
+# Catatan: file database "rekomendasi-buku" sengaja disimpan di repo karena berisi data buku.
+*.sqlite3
+*.sqlite3-journal

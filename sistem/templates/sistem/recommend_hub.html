@@ -1,0 +1,9 @@
+{% extends 'sistem/base.html' %}
+{% block title %}Sistem Rekomendasi{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% include 'sistem/partials/page_header.html' with eyebrow='Rekomendasi' title='Pilih metode rekomendasi' subtitle='Setiap metode memakai data peminjaman dan atribut buku dengan cara yang berbeda.' %}
+    {% include 'sistem/partials/method_cards.html' with with_evaluation=True %}
+</div>
+{% endblock %}

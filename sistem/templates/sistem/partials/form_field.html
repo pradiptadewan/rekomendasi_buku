@@ -1,0 +1,16 @@
+{% comment %}Satu field form Django lengkap dengan label, bantuan, dan pesan error. Parameter: field.{% endcomment %}
+<div class="field{% if field.errors %} has-error{% endif %}">
+    <label for="{{ field.id_for_label }}" class="label">{{ field.label }}</label>
+    {% if field.name == 'password' or field.name == 'password1' or field.name == 'password2' %}
+    <div class="password-wrap">
+        {{ field }}
+        <button type="button" class="password-toggle" aria-label="Tampilkan password" data-password-toggle>
+            {% include 'sistem/partials/icon.html' with name='eye' %}
+        </button>
+    </div>
+    {% else %}
+    {{ field }}
+    {% endif %}
+    {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    {% if field.help_text and not field.errors %}<div class="hint">{{ field.help_text|safe }}</div>{% endif %}
+</div>

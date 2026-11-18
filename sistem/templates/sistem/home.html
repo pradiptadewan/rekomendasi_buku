@@ -1,44 +1,56 @@
 {% extends 'sistem/base.html' %}
 {% load static %}
-
-{% block title %}Home - Rekomendasi Buku{% endblock %}
-
-{% block navigation %}
-<header class="header">
-    <h1 class="header-title">REKOMENDASI BUKU</h1>
-    <nav class="nav-links">
-        <a href="{% url 'sistem:home' %}" class="nav-link active">HOME</a>
-
-        {# --- Link Dashboard dibuat dinamis --- #}
-        {# Tujuannya berubah berdasarkan status login #}
-       {# Buka file template Anda (misal: home.html atau base.html) #}
-
-<a href="{% if user.is_authenticated %}{% url 'sistem:dashboard_user' %}{% else %}{% url 'sistem:dashboard' %}{% endif %}" class="nav-link">DASHBOARD</a>
-
-        {# --- Link Recommendation selalu tampil --- #}
-        <a href="{% url 'sistem:input' %}" class="nav-link">RECOMMENDATION</a>
-
-        {# --- Logika untuk tombol Login/Register atau Logout --- #}
-        {% if user.is_authenticated %}
-            {# Jika sudah login, tampilkan tombol LOGOUT #}
-            <a href="{% url 'sistem:logout' %}" class="header-button">LOGOUT</a>
-        {% else %}
-            {# Jika belum login, tampilkan tombol REGISTER dan LOGIN #}
-            <a href="{% url 'sistem:register' %}" class="header-button">REGISTER</a>
-            <a href="{% url 'sistem:login' %}" class="header-button">LOGIN</a>
-        {% endif %}
-    </nav>
-</header>
-<hr class="header-divider">
-{% endblock navigation %}
+{% block title %}Beranda{% endblock %}
+{% block main_class %}{% endblock %}
 
 {% block content %}
-<main class="home-hero">
-    <div class="hero-content">
-        <h2 class="hero-title">TEMUKAN BUKU FAVORITMU BERIKUTNYA</h2>
-        <p class="hero-subtitle">Jelajahi ribuan buku dari berbagai genre dan dapatkan rekomendasi yang disesuaikan dengan minatmu.</p>
-        <a href="{% url 'sistem:dashboard' %}" class="hero-button">JELAJAHI SEKARANG</a>
+<section class="hero">
+    <div class="container hero-inner">
+        <div class="hero-text">
+            <p class="eyebrow">Sistem Rekomendasi Buku</p>
+            <h1 class="hero-title">Temukan buku favoritmu berikutnya</h1>
+            <p class="hero-lead">Jelajahi koleksi buku dari berbagai genre dan dapatkan rekomendasi berdasarkan kemiripan konten, selera pembaca lain, atau gabungan keduanya.</p>
+            <div class="hero-actions">
+                <a href="{% url 'sistem:recommend' %}" class="btn btn-primary btn-lg">Coba Rekomendasi</a>
+                <a href="{% url 'sistem:book_list' %}" class="btn btn-secondary btn-lg">Jelajahi Koleksi</a>
+            </div>
+            {% if stats %}
+            <dl class="stats">
+                <div><dt>Buku</dt><dd>{{ stats.books }}</dd></div>
+                <div><dt>Pembaca</dt><dd>{{ stats.readers }}</dd></div>
+                <div><dt>Genre</dt><dd>{{ stats.genres }}</dd></div>
+            </dl>
+            {% endif %}
+        </div>
+        <div class="hero-art">
+            <img src="{% static 'images/book1.jpeg' %}" alt="Ilustrasi buku" width="736" height="1104">
+        </div>
     </div>
-    <img class="hero-image" src="{% static 'images/book1.jpeg' %}" alt="Book Image">
-</main>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="section-head">
+            <div>
+                <h2 class="section-title">Tiga cara menemukan buku</h2>
+                <p class="muted">Pilih metode yang paling sesuai dengan kebutuhanmu.</p>
+            </div>
+        </div>
+        {% include 'sistem/partials/method_cards.html' %}
+    </div>
+</section>
+
+{% if popular_books %}
+<section class="section section-alt">
+    <div class="container">
+        <div class="section-head">
+            <h2 class="section-title">Buku populer</h2>
+            <a href="{% url 'sistem:book_list' %}" class="link-arrow">Lihat semua {% include 'sistem/partials/icon.html' with name='arrow-right' %}</a>
+        </div>
+        <div class="book-grid">
+            {% for book in popular_books %}{% include 'sistem/partials/book_card.html' %}{% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
 {% endblock %}
